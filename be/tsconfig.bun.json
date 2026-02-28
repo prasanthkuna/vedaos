@@ -16,6 +16,8 @@
     "validation/**/*.ts",
     "billing/**/*.ts",
     "compliance/**/*.ts",
-    "lib/**/*.ts"
+    "lib/**/*.ts",
+    "db.ts",
+    "storage.ts"
   ]
 }

@@ -1,66 +1,36 @@
 # Backend (veda-be)
 
-Bun-first backend implementing the Phase-1 API contract from `trd.md`.
+Encore backend for VEDA OS using:
+- Encore SQL DB (`db.ts`)
+- Encore Object Storage (`storage.ts`)
+- Clerk token verification (`Authorization: Bearer <token>`)
 
-## Services
-
-- `profiles`
-- `engine`
-- `validation`
-- `billing`
-- `compliance`
-
-## Run
+## Setup
 
 ```bash
 bun install
-bun run dev
+encore secret set --type dev,local NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+encore secret set --type dev,local CLERK_SECRET_KEY
 ```
 
-Server starts at `http://localhost:4000` by default.
+## Run and Check
 
-## Health
+```bash
+encore run
+encore check
+bun run typecheck
+```
 
-- `GET /health`
-- `GET /ready`
-- `GET /api/version`
+## API Groups
 
-## Implemented API Endpoints
+- Profiles: create/get/update
+- Engine: risk, Atmakaraka primer, rectification, story, forecast, weekly card
+- Validation: claim feedback and score retrieval
+- Compliance: consent and deletion requests
+- Billing: intentionally deferred placeholders for rollout +1 week
 
-### Profiles
-- `POST /profiles.create`
-- `GET /profiles.get`
-- `PATCH /profiles.updateLanguage`
-- `PATCH /profiles.updateCurrentCity`
-- `PATCH /profiles.updateCalendarMode`
+## Current Status
 
-### Engine
-- `POST /engine.assessRisk`
-- `POST /engine.getAtmakarakaPrimer`
-- `GET /engine.getRectificationPrompts`
-- `POST /engine.submitRectification`
-- `POST /engine.generateStory`
-- `POST /engine.generateForecast12m`
-- `POST /engine.generateWeekly`
-
-### Validation
-- `POST /validation.validateClaim`
-- `GET /validation.getScores`
-
-### Billing
-- `POST /billing.startTrial`
-- `POST /billing.verifyPurchase`
-- `POST /billing.webhook`
-- `GET /billing.entitlements`
-
-### Compliance
-- `POST /compliance.recordConsent`
-- `POST /compliance.requestDeletion`
-- `GET /compliance.getConsentStatus`
-
-## Notes
-
-- Persistence is currently in-memory to keep development fast.
-- Request/response bodies are validated via `zod`.
-- Scoring and unlock rules follow TRD v2 defaults.
-- Next step to productionize: wire Postgres repositories and durable billing/compliance logs.
+- Data is persisted in Encore Postgres.
+- Story/rectification artifacts are stored in Encore object storage.
+- Billing verification and webhooks are stubs by design for this week.

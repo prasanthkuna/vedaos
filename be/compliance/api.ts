@@ -1,36 +1,51 @@
-import { api } from "encore.dev/api";
-import * as handlers from "../src/services/compliance/handlers";
-import { bridge } from "../lib/bridge";
+import { APIError, Header, api } from "encore.dev/api";
+import { requireUserId } from "../src/auth/clerk";
+import {
+  ensureUser,
+  getConsentStatus as getConsentStatusRepo,
+  recordConsent as recordConsentRepo,
+  requestDeletion as requestDeletionRepo,
+} from "../src/persistence/repo";
 
 export const recordConsent = api(
   { expose: true, method: "POST", path: "/compliance.recordConsent" },
-  async (params: { userId: string; purposeCode: string; policyVersion: string }) =>
-    bridge<Record<string, unknown>>({
-      handler: handlers.recordConsent,
-      method: "POST",
-      path: "/compliance.recordConsent",
-      body: params,
-    }),
+  async (params: { authorization?: Header<"Authorization">; userId?: string; purposeCode: string; policyVersion: string }) => {
+    const authUserId = await requireUserId(params.authorization);
+    const userId = params.userId ?? authUserId;
+    if (userId !== authUserId) throw APIError.permissionDenied("cross_user_forbidden");
+
+    await ensureUser(userId);
+    const consentId = await recordConsentRepo({
+      userId,
+      purposeCode: params.purposeCode,
+      policyVersion: params.policyVersion,
+    });
+
+    return { ok: true as const, consentId };
+  },
 );
 
 export const requestDeletion = api(
   { expose: true, method: "POST", path: "/compliance.requestDeletion" },
-  async (params: { userId: string; reason?: string }) =>
-    bridge<Record<string, unknown>>({
-      handler: handlers.requestDeletion,
-      method: "POST",
-      path: "/compliance.requestDeletion",
-      body: params,
-    }),
+  async (params: { authorization?: Header<"Authorization">; userId?: string; reason?: string }) => {
+    const authUserId = await requireUserId(params.authorization);
+    const userId = params.userId ?? authUserId;
+    if (userId !== authUserId) throw APIError.permissionDenied("cross_user_forbidden");
+
+    await ensureUser(userId);
+    const requestId = await requestDeletionRepo({ userId, reason: params.reason });
+
+    return { ok: true as const, requestId, status: "requested" as const };
+  },
 );
 
 export const getConsentStatus = api(
   { expose: true, method: "GET", path: "/compliance.getConsentStatus" },
-  async (params: { userId: string }) =>
-    bridge<Record<string, unknown>>({
-      handler: handlers.getConsentStatus,
-      method: "GET",
-      path: "/compliance.getConsentStatus",
-      query: params,
-    }),
+  async (params: { authorization?: Header<"Authorization">; userId?: string }) => {
+    const authUserId = await requireUserId(params.authorization);
+    const userId = params.userId ?? authUserId;
+    if (userId !== authUserId) throw APIError.permissionDenied("cross_user_forbidden");
+
+    return getConsentStatusRepo(userId);
+  },
 );

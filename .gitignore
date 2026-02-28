@@ -38,3 +38,5 @@ ios/
 # Misc
 *.tmp
 *.swp
+.encore/
+_encore_clone_tmp/

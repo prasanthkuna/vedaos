@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS veda_deletion_requests;
+DROP TABLE IF EXISTS veda_consents;
+DROP TABLE IF EXISTS veda_entitlements;
+DROP TABLE IF EXISTS veda_rectification_runs;
+DROP TABLE IF EXISTS veda_score_snapshots;
+DROP TABLE IF EXISTS veda_validations;
+DROP TABLE IF EXISTS veda_claims;
+DROP TABLE IF EXISTS veda_engine_runs;
+DROP TABLE IF EXISTS veda_profiles;
+DROP TABLE IF EXISTS veda_users;

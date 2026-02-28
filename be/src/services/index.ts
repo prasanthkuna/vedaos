@@ -1,14 +1,2 @@
-export type ServiceName =
-  | "profiles"
-  | "engine"
-  | "validation"
-  | "billing"
-  | "compliance";
-
-export const services: ServiceName[] = [
-  "profiles",
-  "engine",
-  "validation",
-  "billing",
-  "compliance",
-];
+export const services = ["profiles", "engine", "validation", "billing", "compliance"] as const;
+export type ServiceName = (typeof services)[number];

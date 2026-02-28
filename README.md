@@ -16,8 +16,8 @@ bun run dev
 ### Frontend
 ```bash
 cd fe
-npm install
-npm run start
+bun install
+bun run start
 ```
 
 ## Repo Standards

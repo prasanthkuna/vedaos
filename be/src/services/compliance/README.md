@@ -1,2 +1,1 @@
-# Placeholder
-# Add compliance service handlers here.
+Service handlers are implemented in `handlers.ts`.

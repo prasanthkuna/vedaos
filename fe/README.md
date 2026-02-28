@@ -5,8 +5,8 @@ Expo React Native scaffold for VEDA OS mobile app.
 
 ## Run
 ```bash
-npm install
-npm run start
+bun install
+bun run start
 ```
 
 ## Next

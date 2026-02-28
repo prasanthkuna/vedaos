@@ -1,6 +1,6 @@
-import { json, parseJson, parseQuery } from "@/lib/http";
-import { store } from "@/store/memory";
-import { entitlementsQuerySchema, startTrialBodySchema, verifyPurchaseBodySchema } from "@/schemas/api";
+import { json, parseJson, parseQuery } from "../../lib/http";
+import { store } from "../../store/memory";
+import { entitlementsQuerySchema, startTrialBodySchema, verifyPurchaseBodySchema } from "../../schemas/api";
 
 const nowIso = () => new Date().toISOString();
 

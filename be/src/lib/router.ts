@@ -1,9 +1,9 @@
 import { withErrorBoundary, json } from "./http";
-import * as profiles from "@/services/profiles/handlers";
-import * as engine from "@/services/engine/handlers";
-import * as validation from "@/services/validation/handlers";
-import * as billing from "@/services/billing/handlers";
-import * as compliance from "@/services/compliance/handlers";
+import * as profiles from "../services/profiles/handlers";
+import * as engine from "../services/engine/handlers";
+import * as validation from "../services/validation/handlers";
+import * as billing from "../services/billing/handlers";
+import * as compliance from "../services/compliance/handlers";
 
 type Handler = (req: Request) => Promise<Response>;
 

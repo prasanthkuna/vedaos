@@ -1,4 +1,4 @@
-import type { ClaimClass, ConfidenceLevel, ValidationLabel } from "@/domain/types";
+import type { ClaimClass, ConfidenceLevel, ValidationLabel } from "../domain/types";
 
 const claimWeight: Record<ClaimClass, number> = {
   event: 1.0,

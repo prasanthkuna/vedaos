@@ -7,7 +7,7 @@ Mobile app for VEDA OS (Expo Router + TypeScript, Bun scripts only).
 1. Copy `.env.example` to `.env`
 2. Set `EXPO_PUBLIC_API_BASE_URL` to your Encore API base URL
 3. Set `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` for Clerk provider boot
-4. Use a valid Clerk bearer token in-app for authenticated calls
+4. Sign in through Clerk in-app to obtain authenticated session token
 
 ## Run
 

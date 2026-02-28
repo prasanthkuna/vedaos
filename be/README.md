@@ -4,6 +4,7 @@ Encore backend for VEDA OS using:
 - Encore SQL DB (`db.ts`)
 - Encore Object Storage (`storage.ts`)
 - Clerk token verification (`Authorization: Bearer <token>`)
+- PII encryption at rest (`PII_ENCRYPTION_KEY`)
 
 ## Setup
 
@@ -11,6 +12,7 @@ Encore backend for VEDA OS using:
 bun install
 encore secret set --type dev,local NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 encore secret set --type dev,local CLERK_SECRET_KEY
+encore secret set --type dev,local PII_ENCRYPTION_KEY
 ```
 
 ## Run and Check
@@ -28,6 +30,7 @@ bun run typecheck
 - Validation: claim feedback and score retrieval
 - Compliance: consent and deletion requests
 - Billing: intentionally deferred placeholders for rollout +1 week
+- Legacy in-memory Bun server path removed
 
 ## Current Status
 

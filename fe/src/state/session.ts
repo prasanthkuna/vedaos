@@ -3,10 +3,8 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 type SessionState = {
-  token: string;
   profileId: string;
   runId: string;
-  setToken: (token: string) => void;
   setProfileId: (profileId: string) => void;
   setRunId: (runId: string) => void;
   resetJourney: () => void;
@@ -15,10 +13,8 @@ type SessionState = {
 export const useSessionStore = create<SessionState>()(
   persist(
     (set) => ({
-      token: "",
       profileId: "",
       runId: "",
-      setToken: (token) => set({ token }),
       setProfileId: (profileId) => set({ profileId }),
       setRunId: (runId) => set({ runId }),
       resetJourney: () => set({ profileId: "", runId: "" }),
@@ -27,7 +23,6 @@ export const useSessionStore = create<SessionState>()(
       name: "veda-session",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
-        token: state.token,
         profileId: state.profileId,
         runId: state.runId,
       }),

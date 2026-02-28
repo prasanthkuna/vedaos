@@ -12,12 +12,21 @@ import {
   yearsForMode,
 } from "../src/lib/engine";
 import {
+  getEntitlements,
   getProfileByUser,
+  getRectificationPrompts as getRectificationPromptsRepo,
   getScores,
   saveRectification,
   saveStoryRun,
   setProfileRisk,
 } from "../src/persistence/repo";
+
+const assertProAccess = async (userId: string) => {
+  const ent = await getEntitlements(userId);
+  if (!ent || (!ent.pro_enabled && !ent.trial_active && ent.plan_code !== "family")) {
+    throw APIError.permissionDenied("pro_required");
+  }
+};
 
 export const assessRisk = api(
   { expose: true, method: "POST", path: "/engine.assessRisk" },
@@ -60,16 +69,11 @@ export const getRectificationPrompts = api(
     languageCode?: "en" | "hi" | "te" | "ta" | "kn" | "ml";
   }) => {
     await requireUserId(params.authorization);
+    const prompts = await getRectificationPromptsRepo(params.languageCode ?? "en");
     return {
       engineVersion: params.engineVersion ?? "v0.1",
       languageCode: params.languageCode ?? "en",
-      prompts: [
-        { promptId: "job_shift", text: "Did you face a major job shift around a specific year?" },
-        { promptId: "relocation", text: "Did relocation happen with strong pressure in any year?" },
-        { promptId: "exam_result", text: "Was there a defining exam or certification period?" },
-        { promptId: "family_responsibility", text: "Did family responsibility increase sharply in any period?" },
-        { promptId: "financial_stress", text: "Did financial pressure peak in any narrow window?" },
-      ],
+      prompts,
     };
   },
 );
@@ -148,7 +152,7 @@ export const generateStory = api(
       const classes = claimClassesForYear(year);
       const points = classes.map((weightClass, idx) => {
         const claimId = makeClaimId();
-        const text = claimText(year, weightClass);
+        const text = claimText(year, weightClass, `${profile.profileId}-${profile.dob}-${profile.tobLocal}`);
         const point = {
           claimId,
           text,
@@ -209,18 +213,22 @@ export const generateForecast12m = api(
   { expose: true, method: "POST", path: "/engine.generateForecast12m" },
   async (params: { authorization?: Header<"Authorization">; profileId: string }) => {
     const userId = await requireUserId(params.authorization);
+    await assertProAccess(userId);
     const profile = await getProfileByUser(params.profileId, userId);
     if (!profile) throw APIError.notFound("profile_not_found");
+    const score = await getScores(profile.profileId);
+    const tone =
+      score.psa >= 80 ? "momentum and confident execution" : score.psa >= 60 ? "measured progress and calibration" : "consolidation and patience";
 
     return {
       forecastRunId: `fct_${Date.now()}`,
       forecast: {
-        summary: "12-month outlook generated from validated profile patterns.",
+        summary: `12-month outlook tuned to your validated pattern strength (${tone}).`,
         windows: [
-          { period: "Q1", theme: "reset and alignment" },
-          { period: "Q2", theme: "execution and momentum" },
-          { period: "Q3", theme: "relationship boundaries" },
-          { period: "Q4", theme: "consolidation and gains" },
+          { period: "Q1", theme: tone },
+          { period: "Q2", theme: profile.birthTimeRiskLevel === "high" ? "verify major decisions before commitment" : "expansion with structure" },
+          { period: "Q3", theme: score.diversityScore >= 50 ? "balanced growth across priorities" : "focus on one core axis" },
+          { period: "Q4", theme: score.futureUnlocked ? "harvest and scale" : "stability and groundwork" },
         ],
       },
     };
@@ -231,6 +239,7 @@ export const generateWeekly = api(
   { expose: true, method: "POST", path: "/engine.generateWeekly" },
   async (params: { authorization?: Header<"Authorization">; profileId: string; weekStartUtc: string }) => {
     const userId = await requireUserId(params.authorization);
+    await assertProAccess(userId);
     const profile = await getProfileByUser(params.profileId, userId);
     if (!profile) throw APIError.notFound("profile_not_found");
 

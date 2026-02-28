@@ -2,14 +2,14 @@
   "name": "veda-be",
   "version": "0.1.0",
   "private": true,
-  "description": "VEDA OS backend services scaffold",
+  "description": "VEDA OS backend services",
   "packageManager": "bun@1.3.4",
   "type": "module",
   "scripts": {
-    "dev": "bun --watch src/index.ts",
-    "start": "bun src/index.ts",
+    "dev": "encore run",
+    "start": "encore run",
     "typecheck": "bunx tsc --noEmit -p tsconfig.bun.json",
-    "lint": "echo \"lint placeholder\""
+    "lint": "bun run typecheck"
   },
   "dependencies": {
     "@clerk/backend": "^2.33.0",

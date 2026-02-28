@@ -1,6 +1,7 @@
 import { vedaDB } from "../../db";
 import { artifactsBucket } from "../../storage";
 import { makeId } from "../lib/id";
+import { decryptPII, encryptPII } from "../lib/crypto";
 import type {
   CalendarMode,
   ConfidenceLevel,
@@ -60,9 +61,9 @@ const mapProfile = (row: Record<string, any>): ProfileRecord => ({
   profileId: row.profile_id,
   userId: row.user_id,
   displayName: row.display_name,
-  dob: row.dob,
-  tobLocal: row.tob_local,
-  pobText: row.pob_text,
+  dob: decryptPII(row.dob),
+  tobLocal: decryptPII(row.tob_local),
+  pobText: decryptPII(row.pob_text),
   tzIana: row.tz_iana,
   lat: row.lat ?? undefined,
   lon: row.lon ?? undefined,
@@ -70,12 +71,12 @@ const mapProfile = (row: Record<string, any>): ProfileRecord => ({
   languageCode: row.language_code,
   languageMode: row.language_mode,
   calendarMode: row.calendar_mode,
-  currentCity: row.current_city ?? undefined,
+  currentCity: row.current_city ? decryptPII(row.current_city) : undefined,
   currentLat: row.current_lat ?? undefined,
   currentLon: row.current_lon ?? undefined,
   isGuestProfile: row.is_guest_profile,
   birthTimeRiskLevel: row.birth_time_risk_level ?? undefined,
-  rectifiedTobLocal: row.rectified_tob_local ?? undefined,
+  rectifiedTobLocal: row.rectified_tob_local ? decryptPII(row.rectified_tob_local) : undefined,
   rectificationCompleted: row.rectification_completed,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -124,7 +125,7 @@ export const createProfile = async (input: {
       lat, lon, birth_time_certainty, language_code, language_mode, calendar_mode,
       is_guest_profile, rectification_completed, created_at, updated_at
     ) VALUES (
-      ${profileId}, ${input.userId}, ${input.displayName}, ${input.dob}, ${input.tobLocal}, ${input.pobText}, ${input.tzIana},
+      ${profileId}, ${input.userId}, ${input.displayName}, ${encryptPII(input.dob)}, ${encryptPII(input.tobLocal)}, ${encryptPII(input.pobText)}, ${input.tzIana},
       ${input.lat ?? null}, ${input.lon ?? null}, ${input.birthTimeCertainty}, 'en', 'auto', 'civil',
       ${input.isGuestProfile}, false, NOW(), NOW()
     )
@@ -178,7 +179,7 @@ export const updateProfileCity = async (
 ): Promise<void> => {
   await vedaDB.exec`
     UPDATE veda_profiles
-    SET current_city = ${city}, current_lat = ${lat}, current_lon = ${lon}, updated_at = NOW()
+    SET current_city = ${encryptPII(city)}, current_lat = ${lat}, current_lon = ${lon}, updated_at = NOW()
     WHERE profile_id = ${profileId} AND deleted_at IS NULL
   `;
 };
@@ -242,7 +243,7 @@ export const saveRectification = async (input: {
 
   await vedaDB.exec`
     UPDATE veda_profiles
-    SET rectified_tob_local = ${input.effectiveTobLocal}, rectification_completed = true, updated_at = NOW()
+    SET rectified_tob_local = ${encryptPII(input.effectiveTobLocal)}, rectification_completed = true, updated_at = NOW()
     WHERE profile_id = ${input.profileId}
   `;
 
@@ -551,4 +552,26 @@ export const getConsentStatus = async (userId: string) => {
     latestConsent,
     latestDeletionRequest: latestDeletion,
   };
+};
+
+export const getRectificationPrompts = async (languageCode: LanguageCode): Promise<Array<{ promptId: string; text: string }>> => {
+  const rows = await vedaDB.queryAll<{ prompt_id: string; text: string }>`
+    SELECT prompt_id, text
+    FROM veda_rectification_prompts
+    WHERE language_code = ${languageCode} AND active = true
+    ORDER BY prompt_id
+  `;
+
+  if (rows.length > 0) {
+    return rows.map((row) => ({ promptId: row.prompt_id, text: row.text }));
+  }
+
+  const fallback = await vedaDB.queryAll<{ prompt_id: string; text: string }>`
+    SELECT prompt_id, text
+    FROM veda_rectification_prompts
+    WHERE language_code = 'en' AND active = true
+    ORDER BY prompt_id
+  `;
+
+  return fallback.map((row) => ({ promptId: row.prompt_id, text: row.text }));
 };

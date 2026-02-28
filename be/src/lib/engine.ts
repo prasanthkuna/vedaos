@@ -3,16 +3,22 @@ import { makeId } from "./id";
 
 const PLANETS = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"];
 
-const claimText = (year: number, type: ClaimClass): string => {
+const hash = (seed: string) => [...seed].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+
+const pick = <T>(items: T[], seed: string): T => items[Math.abs(hash(seed)) % items.length];
+
+const claimText = (year: number, type: ClaimClass, seed: string): string => {
+  const axis = pick(["career", "finances", "family responsibilities", "partnership dynamics", "location and home"], `${seed}-axis-${year}`);
+  const tone = pick(["sudden", "steady", "pressure-driven", "discipline-led", "supportive"], `${seed}-tone-${year}`);
   switch (type) {
     case "event":
-      return `${year}: Structural shift around work, money, or family responsibility.`;
+      return `${year}: ${tone} structural shift around ${axis}.`;
     case "decision":
-      return `${year}: Important personal decision with long-term impact.`;
+      return `${year}: A long-horizon decision around ${axis}.`;
     case "descriptor":
-      return `${year}: Mental and external pace changed noticeably.`;
+      return `${year}: The mental and external pace around ${axis} changed noticeably.`;
     case "stabilization":
-      return `${year}: Stabilization phase, routines dominated over major changes.`;
+      return `${year}: Stabilization phase for ${axis}; routines dominated over major changes.`;
   }
 };
 

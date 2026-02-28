@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "VEDA OS",
+    "slug": "veda-os",
+    "scheme": "vedaos",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.vedaos.app"
+    },
+    "android": {
+      "package": "com.vedaos.app"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

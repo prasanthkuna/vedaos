@@ -40,3 +40,6 @@ ios/
 *.swp
 .encore/
 _encore_clone_tmp/
+encore.gen.go
+encore.gen.cue
+/encore.gen

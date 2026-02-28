@@ -1,8 +1,8 @@
 # VEDA OS
 
 Monorepo containing:
-- `be/` - Backend services (TypeScript, Bun-first workflow)
-- `fe/` - Frontend mobile app scaffold (Expo + React Native)
+- `be/` - Backend services (Encore TypeScript + Bun tooling)
+- `fe/` - Frontend mobile app (Expo + React Native)
 
 ## Quick Start
 
@@ -10,7 +10,7 @@ Monorepo containing:
 ```bash
 cd be
 bun install
-bun run dev
+encore run
 ```
 
 ### Frontend
@@ -19,9 +19,3 @@ cd fe
 bun install
 bun run start
 ```
-
-## Repo Standards
-- Keep `main` releasable.
-- Use feature flags for incomplete modules.
-- Validate inputs with shared schemas before business logic.
-- Never log sensitive birth details.

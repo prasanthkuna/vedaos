@@ -1,2 +1,1 @@
-# Placeholder
-# Add validation service handlers here.
+Service handlers are implemented in `handlers.ts`.

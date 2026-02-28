@@ -1,0 +1,39 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Node / JS
+node_modules/
+.npm/
+.pnpm-store/
+.bun/
+dist/
+build/
+coverage/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Mobile / Expo
+.expo/
+.expo-shared/
+android/
+ios/
+
+# Misc
+*.tmp
+*.swp

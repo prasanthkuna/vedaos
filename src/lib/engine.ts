@@ -1,5 +1,5 @@
-import type { ClaimClass, Profile, RiskLevel } from "@/domain/types";
-import { makeId } from "@/lib/id";
+import type { ClaimClass, Profile, RiskLevel } from "../domain/types";
+import { makeId } from "./id";
 
 const PLANETS = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"];
 

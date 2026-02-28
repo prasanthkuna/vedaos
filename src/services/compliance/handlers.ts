@@ -1,7 +1,7 @@
-import { json, parseJson, parseQuery } from "@/lib/http";
-import { makeId } from "@/lib/id";
-import { store } from "@/store/memory";
-import { consentStatusQuerySchema, recordConsentBodySchema, requestDeletionBodySchema } from "@/schemas/api";
+import { json, parseJson, parseQuery } from "../../lib/http";
+import { makeId } from "../../lib/id";
+import { store } from "../../store/memory";
+import { consentStatusQuerySchema, recordConsentBodySchema, requestDeletionBodySchema } from "../../schemas/api";
 
 const nowIso = () => new Date().toISOString();
 

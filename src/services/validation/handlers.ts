@@ -1,9 +1,9 @@
-import { json, parseJson, parseQuery } from "@/lib/http";
-import { store } from "@/store/memory";
-import { getScoresQuerySchema, validateClaimBodySchema } from "@/schemas/api";
-import { makeId } from "@/lib/id";
-import { round2, scoreClaim } from "@/lib/scoring";
-import type { ValidationRecord } from "@/domain/types";
+import { json, parseJson, parseQuery } from "../../lib/http";
+import { store } from "../../store/memory";
+import { getScoresQuerySchema, validateClaimBodySchema } from "../../schemas/api";
+import { makeId } from "../../lib/id";
+import { round2, scoreClaim } from "../../lib/scoring";
+import type { ValidationRecord } from "../../domain/types";
 
 const nowIso = () => new Date().toISOString();
 

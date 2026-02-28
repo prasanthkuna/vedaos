@@ -8,8 +8,8 @@ import type {
   StoryRun,
   User,
   ValidationRecord,
-} from "@/domain/types";
-import { makeId } from "@/lib/id";
+} from "../domain/types";
+import { makeId } from "../lib/id";
 
 const nowIso = () => new Date().toISOString();
 

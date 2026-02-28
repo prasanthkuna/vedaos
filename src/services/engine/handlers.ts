@@ -1,13 +1,13 @@
-import { makeId } from "@/lib/id";
-import { json, parseJson, parseQuery } from "@/lib/http";
-import { store } from "@/store/memory";
+import { makeId } from "../../lib/id";
+import { json, parseJson, parseQuery } from "../../lib/http";
+import { store } from "../../store/memory";
 import {
   generateStoryBodySchema,
   generateWeeklyBodySchema,
   profileIdBodySchema,
   rectificationPromptsQuerySchema,
   submitRectificationBodySchema,
-} from "@/schemas/api";
+} from "../../schemas/api";
 import {
   assessRiskFromTob,
   atmakarakaFromProfile,
@@ -18,8 +18,8 @@ import {
   weeklyTheme,
   weeklyWindows,
   yearsForMode,
-} from "@/lib/engine";
-import type { Claim } from "@/domain/types";
+} from "../../lib/engine";
+import type { Claim } from "../../domain/types";
 
 const nowIso = () => new Date().toISOString();
 

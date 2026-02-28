@@ -1,13 +1,13 @@
-import { makeId } from "@/lib/id";
-import { json, parseJson, parseQuery } from "@/lib/http";
-import { store } from "@/store/memory";
+import { makeId } from "../../lib/id";
+import { json, parseJson, parseQuery } from "../../lib/http";
+import { store } from "../../store/memory";
 import {
   createProfileBodySchema,
   profileIdQuerySchema,
   updateCalendarModeBodySchema,
   updateCurrentCityBodySchema,
   updateLanguageBodySchema,
-} from "@/schemas/api";
+} from "../../schemas/api";
 
 const nowIso = () => new Date().toISOString();
 

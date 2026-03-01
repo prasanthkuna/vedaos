@@ -5,7 +5,7 @@ const PLANETS = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn",
 
 const hash = (seed: string) => [...seed].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
 
-const pick = <T>(items: T[], seed: string): T => items[Math.abs(hash(seed)) % items.length];
+const pick = <T>(items: readonly T[], seed: string): T => items[Math.abs(hash(seed)) % items.length];
 
 const claimText = (year: number, type: ClaimClass, seed: string): string => {
   const axis = pick(["career", "finances", "family responsibilities", "partnership dynamics", "location and home"], `${seed}-axis-${year}`);
@@ -54,6 +54,39 @@ export const claimClassesForYear = (year: number): ClaimClass[] => {
 };
 
 export const makeClaimId = (): string => makeId("clm");
+
+const HOUSES = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"] as const;
+const DASHA_LORDS = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"] as const;
+
+const pickHouse = (seed: string) => pick(HOUSES, `${seed}-house`);
+const pickDasha = (seed: string) => ({
+  md: pick(DASHA_LORDS, `${seed}-md`),
+  ad: pick(DASHA_LORDS, `${seed}-ad`),
+  pd: pick(DASHA_LORDS, `${seed}-pd`),
+});
+
+export const claimEvidence = (year: number, type: ClaimClass, seed: string): { whyLite: string[]; triggerFlags: string[] } => {
+  const house = pickHouse(`${seed}-${year}-${type}`);
+  const dasha = pickDasha(`${seed}-${year}-${type}`);
+  const transits = type === "stabilization" ? ["saturn_jupiter_hold"] : ["saturn_jupiter_support", "rahu_ketu_axis"];
+  const weekly = year % 2 === 0 ? "moon_trigger" : "mars_trigger";
+
+  const reasons =
+    type === "stabilization"
+      ? [
+          `MD/AD/PD ${dasha.md}-${dasha.ad}-${dasha.pd} sustained routine outcomes.`,
+          `Saturn and Jupiter support on ${house} favored consolidation over disruption.`,
+        ]
+      : [
+          `MD/AD/PD ${dasha.md}-${dasha.ad}-${dasha.pd} activated ${house} themes.`,
+          `Transit context included ${transits.join(" + ")} with ${weekly} refinement.`,
+        ];
+
+  return {
+    whyLite: reasons,
+    triggerFlags: ["md_ad_pd", ...transits, weekly, `house_${house.replace("th", "")}`],
+  };
+};
 
 export const rectificationWindow = (tobLocal: string, answerCount: number) => {
   const [hRaw, mRaw] = tobLocal.split(":");

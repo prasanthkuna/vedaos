@@ -5,6 +5,7 @@ import {
   ensureUser,
   getEntitlements,
   getProfileByUser,
+  listProfilesByUser,
   guestProfileCount,
   updateProfileCalendarMode,
   updateProfileCity,
@@ -62,6 +63,23 @@ export const get = api(
 
     const entitlements = await getEntitlements(userId);
     return { ...profile, entitlements };
+  },
+);
+
+export const list = api(
+  { expose: true, method: "GET", path: "/profiles.list" },
+  async (params: { authorization?: Header<"Authorization"> }) => {
+    const userId = await requireUserId(params.authorization);
+    const profiles = await listProfilesByUser(userId);
+    return {
+      profiles: profiles.map((p) => ({
+        profileId: p.profileId,
+        displayName: p.displayName,
+        isGuestProfile: p.isGuestProfile,
+        birthTimeRiskLevel: p.birthTimeRiskLevel ?? null,
+        rectificationCompleted: p.rectificationCompleted,
+      })),
+    };
   },
 );
 

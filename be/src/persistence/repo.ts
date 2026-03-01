@@ -159,6 +159,15 @@ export const getProfileByUser = async (profileId: string, userId: string): Promi
   return row ? mapProfile(row) : null;
 };
 
+export const listProfilesByUser = async (userId: string): Promise<ProfileRecord[]> => {
+  const rows = await vedaDB.queryAll<Record<string, any>>`
+    SELECT * FROM veda_profiles
+    WHERE user_id = ${userId} AND deleted_at IS NULL
+    ORDER BY created_at ASC
+  `;
+  return rows.map(mapProfile);
+};
+
 export const updateProfileLanguage = async (
   profileId: string,
   languageCode: LanguageCode,

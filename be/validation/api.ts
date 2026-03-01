@@ -8,6 +8,47 @@ import {
   recomputeScores,
   upsertValidation,
 } from "../src/persistence/repo";
+import { enforceRateLimit } from "../src/lib/rate-limit";
+
+const buildUnlock = (input: {
+  validatedCount: number;
+  yearCoverage: number;
+  diversityScore: number;
+  futureUnlocked: boolean;
+  highRiskBlocked: boolean;
+}) => {
+  const reasons: string[] = [];
+  const nextSteps: string[] = [];
+  const quickProofEligible =
+    input.validatedCount >= 6 &&
+    input.yearCoverage >= 3 &&
+    input.diversityScore >= 50 &&
+    !input.highRiskBlocked;
+
+  if (input.validatedCount < 6) {
+    reasons.push("need_more_validations");
+    nextSteps.push("Validate at least 6 claims.");
+  }
+  if (input.yearCoverage < 3) {
+    reasons.push("need_more_year_coverage");
+    nextSteps.push("Validate claims across at least 3 different years.");
+  }
+  if (input.diversityScore < 50) {
+    reasons.push("need_more_claim_diversity");
+    nextSteps.push("Include both event and non-event claims.");
+  }
+  if (input.highRiskBlocked) {
+    reasons.push("rectification_required");
+    nextSteps.push("Complete baseline rectification to remove high-risk lock.");
+  }
+
+  return {
+    quickProofEligible,
+    futureUnlocked: input.futureUnlocked,
+    reasons,
+    nextSteps,
+  };
+};
 
 export const validateClaim = api(
   { expose: true, method: "POST", path: "/validation.validateClaim" },
@@ -25,6 +66,7 @@ export const validateClaim = api(
     note?: string;
   }) => {
     const userId = await requireUserId(params.authorization);
+    enforceRateLimit(`validate:${userId}`, 120, 60_000);
     const profile = await getProfileByUser(params.profileId, userId);
     if (!profile) throw APIError.notFound("profile_not_found");
 
@@ -60,6 +102,13 @@ export const validateClaim = api(
       yearCoverage: score.yearCoverage,
       diversityScore: score.diversityScore,
       futureUnlocked: score.futureUnlocked,
+      unlock: buildUnlock({
+        validatedCount: score.validatedCount,
+        yearCoverage: score.yearCoverage,
+        diversityScore: score.diversityScore,
+        futureUnlocked: score.futureUnlocked,
+        highRiskBlocked: profile.birthTimeRiskLevel === "high" && !profile.rectificationCompleted,
+      }),
     };
   },
 );
@@ -68,9 +117,20 @@ export const getScores = api(
   { expose: true, method: "GET", path: "/validation.getScores" },
   async (params: { authorization?: Header<"Authorization">; profileId: string }) => {
     const userId = await requireUserId(params.authorization);
+    enforceRateLimit(`scores:${userId}`, 120, 60_000);
     const profile = await getProfileByUser(params.profileId, userId);
     if (!profile) throw APIError.notFound("profile_not_found");
 
-    return getScoresRepo(params.profileId);
+    const score = await getScoresRepo(params.profileId);
+    return {
+      ...score,
+      unlock: buildUnlock({
+        validatedCount: score.validatedCount,
+        yearCoverage: score.yearCoverage,
+        diversityScore: score.diversityScore,
+        futureUnlocked: score.futureUnlocked,
+        highRiskBlocked: profile.birthTimeRiskLevel === "high" && !profile.rectificationCompleted,
+      }),
+    };
   },
 );

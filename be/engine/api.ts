@@ -3,6 +3,7 @@ import { requireUserId } from "../src/auth/clerk";
 import {
   assessRiskFromTob,
   atmakarakaFromProfile,
+  claimEvidence,
   claimClassesForYear,
   claimText,
   makeClaimId,
@@ -20,6 +21,7 @@ import {
   saveStoryRun,
   setProfileRisk,
 } from "../src/persistence/repo";
+import { enforceRateLimit } from "../src/lib/rate-limit";
 
 const assertProAccess = async (userId: string) => {
   const ent = await getEntitlements(userId);
@@ -32,6 +34,7 @@ export const assessRisk = api(
   { expose: true, method: "POST", path: "/engine.assessRisk" },
   async (params: { authorization?: Header<"Authorization">; profileId: string }) => {
     const userId = await requireUserId(params.authorization);
+    enforceRateLimit(`risk:${userId}`, 30, 60_000);
     const profile = await getProfileByUser(params.profileId, userId);
     if (!profile) throw APIError.notFound("profile_not_found");
 
@@ -54,6 +57,7 @@ export const getAtmakarakaPrimer = api(
   { expose: true, method: "POST", path: "/engine.getAtmakarakaPrimer" },
   async (params: { authorization?: Header<"Authorization">; profileId: string }) => {
     const userId = await requireUserId(params.authorization);
+    enforceRateLimit(`atmakaraka:${userId}`, 30, 60_000);
     const profile = await getProfileByUser(params.profileId, userId);
     if (!profile) throw APIError.notFound("profile_not_found");
 
@@ -94,6 +98,7 @@ export const submitRectification = api(
     }>;
   }) => {
     const userId = await requireUserId(params.authorization);
+    enforceRateLimit(`rectification:${userId}`, 8, 60_000);
     const profile = await getProfileByUser(params.profileId, userId);
     if (!profile) throw APIError.notFound("profile_not_found");
 
@@ -121,6 +126,7 @@ export const generateStory = api(
   { expose: true, method: "POST", path: "/engine.generateStory" },
   async (params: { authorization?: Header<"Authorization">; profileId: string; mode: "quick5y" | "full15y" }) => {
     const userId = await requireUserId(params.authorization);
+    enforceRateLimit(`story:${userId}`, 12, 60_000);
     const profile = await getProfileByUser(params.profileId, userId);
     if (!profile) throw APIError.notFound("profile_not_found");
 
@@ -153,12 +159,13 @@ export const generateStory = api(
       const points = classes.map((weightClass, idx) => {
         const claimId = makeClaimId();
         const text = claimText(year, weightClass, `${profile.profileId}-${profile.dob}-${profile.tobLocal}`);
+        const evidence = claimEvidence(year, weightClass, `${profile.profileId}-${profile.dob}-${profile.tobLocal}`);
         const point = {
           claimId,
           text,
           weightClass,
           confidenceScore: Math.max(50, 92 - idx * 8),
-          whyLite: ["Derived from MD/AD/PD overlap", "Transit support considered"],
+          whyLite: evidence.whyLite,
           whyFullAvailable: true,
         };
 
@@ -169,7 +176,7 @@ export const generateStory = api(
           weightClass,
           confidenceScore: point.confidenceScore,
           templateCode: `tmp_${weightClass}_v1`,
-          triggerFlags: ["md-ad-pd", "transit_context"],
+          triggerFlags: evidence.triggerFlags,
         });
 
         return point;
@@ -202,9 +209,27 @@ export const generateStory = api(
       claims,
     });
 
+    const quickProof =
+      params.mode === "quick5y"
+        ? {
+            eligibleForExpansion:
+              score.validatedCount >= 6 &&
+              score.yearCoverage >= 3 &&
+              score.diversityScore >= 50 &&
+              !(profile.birthTimeRiskLevel === "high" && !profile.rectificationCompleted),
+            guardrails: {
+              minValidatedCount: 6,
+              minYearCoverage: 3,
+              minDiversityScore: 50,
+              highRiskNeedsRectification: true,
+            },
+          }
+        : null;
+
     return {
       runId: run.runId,
       feed,
+      quickProof,
     };
   },
 );
@@ -213,6 +238,7 @@ export const generateForecast12m = api(
   { expose: true, method: "POST", path: "/engine.generateForecast12m" },
   async (params: { authorization?: Header<"Authorization">; profileId: string }) => {
     const userId = await requireUserId(params.authorization);
+    enforceRateLimit(`forecast:${userId}`, 12, 60_000);
     await assertProAccess(userId);
     const profile = await getProfileByUser(params.profileId, userId);
     if (!profile) throw APIError.notFound("profile_not_found");
@@ -239,6 +265,7 @@ export const generateWeekly = api(
   { expose: true, method: "POST", path: "/engine.generateWeekly" },
   async (params: { authorization?: Header<"Authorization">; profileId: string; weekStartUtc: string }) => {
     const userId = await requireUserId(params.authorization);
+    enforceRateLimit(`weekly:${userId}`, 20, 60_000);
     await assertProAccess(userId);
     const profile = await getProfileByUser(params.profileId, userId);
     if (!profile) throw APIError.notFound("profile_not_found");

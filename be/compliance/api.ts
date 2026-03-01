@@ -8,7 +8,7 @@ import {
 } from "../src/persistence/repo";
 
 export const recordConsent = api(
-  { expose: true, method: "POST", path: "/compliance.recordConsent" },
+  { expose: true, method: "POST", path: "/compliance/record-consent" },
   async (params: { authorization?: Header<"Authorization">; userId?: string; purposeCode: string; policyVersion: string }) => {
     const authUserId = await requireUserId(params.authorization);
     const userId = params.userId ?? authUserId;
@@ -26,7 +26,7 @@ export const recordConsent = api(
 );
 
 export const requestDeletion = api(
-  { expose: true, method: "POST", path: "/compliance.requestDeletion" },
+  { expose: true, method: "POST", path: "/compliance/request-deletion" },
   async (params: { authorization?: Header<"Authorization">; userId?: string; reason?: string }) => {
     const authUserId = await requireUserId(params.authorization);
     const userId = params.userId ?? authUserId;
@@ -40,7 +40,7 @@ export const requestDeletion = api(
 );
 
 export const getConsentStatus = api(
-  { expose: true, method: "GET", path: "/compliance.getConsentStatus" },
+  { expose: true, method: "GET", path: "/compliance/get-consent-status" },
   async (params: { authorization?: Header<"Authorization">; userId?: string }) => {
     const authUserId = await requireUserId(params.authorization);
     const userId = params.userId ?? authUserId;

@@ -51,7 +51,7 @@ const buildUnlock = (input: {
 };
 
 export const validateClaim = api(
-  { expose: true, method: "POST", path: "/validation.validateClaim" },
+  { expose: true, method: "POST", path: "/validation/validate-claim" },
   async (params: {
     authorization?: Header<"Authorization">;
     profileId: string;
@@ -114,7 +114,7 @@ export const validateClaim = api(
 );
 
 export const getScores = api(
-  { expose: true, method: "GET", path: "/validation.getScores" },
+  { expose: true, method: "GET", path: "/validation/get-scores" },
   async (params: { authorization?: Header<"Authorization">; profileId: string }) => {
     const userId = await requireUserId(params.authorization);
     enforceRateLimit(`scores:${userId}`, 120, 60_000);

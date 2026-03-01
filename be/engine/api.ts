@@ -31,7 +31,7 @@ const assertProAccess = async (userId: string) => {
 };
 
 export const assessRisk = api(
-  { expose: true, method: "POST", path: "/engine.assessRisk" },
+  { expose: true, method: "POST", path: "/engine/assess-risk" },
   async (params: { authorization?: Header<"Authorization">; profileId: string }) => {
     const userId = await requireUserId(params.authorization);
     enforceRateLimit(`risk:${userId}`, 30, 60_000);
@@ -54,7 +54,7 @@ export const assessRisk = api(
 );
 
 export const getAtmakarakaPrimer = api(
-  { expose: true, method: "POST", path: "/engine.getAtmakarakaPrimer" },
+  { expose: true, method: "POST", path: "/engine/atmakaraka-primer" },
   async (params: { authorization?: Header<"Authorization">; profileId: string }) => {
     const userId = await requireUserId(params.authorization);
     enforceRateLimit(`atmakaraka:${userId}`, 30, 60_000);
@@ -66,7 +66,7 @@ export const getAtmakarakaPrimer = api(
 );
 
 export const getRectificationPrompts = api(
-  { expose: true, method: "GET", path: "/engine.getRectificationPrompts" },
+  { expose: true, method: "GET", path: "/engine/rectification-prompts" },
   async (params: {
     authorization?: Header<"Authorization">;
     engineVersion?: string;
@@ -83,7 +83,7 @@ export const getRectificationPrompts = api(
 );
 
 export const submitRectification = api(
-  { expose: true, method: "POST", path: "/engine.submitRectification" },
+  { expose: true, method: "POST", path: "/engine/submit-rectification" },
   async (params: {
     authorization?: Header<"Authorization">;
     profileId: string;
@@ -123,7 +123,7 @@ export const submitRectification = api(
 );
 
 export const generateStory = api(
-  { expose: true, method: "POST", path: "/engine.generateStory" },
+  { expose: true, method: "POST", path: "/engine/generate-story" },
   async (params: { authorization?: Header<"Authorization">; profileId: string; mode: "quick5y" | "full15y" }) => {
     const userId = await requireUserId(params.authorization);
     enforceRateLimit(`story:${userId}`, 12, 60_000);
@@ -235,7 +235,7 @@ export const generateStory = api(
 );
 
 export const generateForecast12m = api(
-  { expose: true, method: "POST", path: "/engine.generateForecast12m" },
+  { expose: true, method: "POST", path: "/engine/generate-forecast-12m" },
   async (params: { authorization?: Header<"Authorization">; profileId: string }) => {
     const userId = await requireUserId(params.authorization);
     enforceRateLimit(`forecast:${userId}`, 12, 60_000);
@@ -262,7 +262,7 @@ export const generateForecast12m = api(
 );
 
 export const generateWeekly = api(
-  { expose: true, method: "POST", path: "/engine.generateWeekly" },
+  { expose: true, method: "POST", path: "/engine/generate-weekly" },
   async (params: { authorization?: Header<"Authorization">; profileId: string; weekStartUtc: string }) => {
     const userId = await requireUserId(params.authorization);
     enforceRateLimit(`weekly:${userId}`, 20, 60_000);

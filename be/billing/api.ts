@@ -2,7 +2,7 @@ import { Header, api } from "encore.dev/api";
 import { requireUserId } from "../src/auth/clerk";
 
 export const startTrial = api(
-  { expose: true, method: "POST", path: "/billing.startTrial" },
+  { expose: true, method: "POST", path: "/billing/start-trial" },
   async (params: { authorization?: Header<"Authorization">; userId?: string; platform: "ios" | "android" }) => {
     const authUserId = await requireUserId(params.authorization);
     const userId = params.userId ?? authUserId;
@@ -15,7 +15,7 @@ export const startTrial = api(
 );
 
 export const verifyPurchase = api(
-  { expose: true, method: "POST", path: "/billing.verifyPurchase" },
+  { expose: true, method: "POST", path: "/billing/verify-purchase" },
   async (params: {
     authorization?: Header<"Authorization">;
     userId?: string;
@@ -33,7 +33,7 @@ export const verifyPurchase = api(
 );
 
 export const webhook = api(
-  { expose: true, method: "POST", path: "/billing.webhook" },
+  { expose: true, method: "POST", path: "/billing/webhook" },
   async (_params: { eventType?: string; platform?: "ios" | "android"; userId?: string; status?: string }) => ({
     accepted: true,
     deferred: true,
@@ -41,7 +41,7 @@ export const webhook = api(
 );
 
 export const entitlements = api(
-  { expose: true, method: "GET", path: "/billing.entitlements" },
+  { expose: true, method: "GET", path: "/billing/entitlements" },
   async (params: { authorization?: Header<"Authorization">; userId?: string }) => {
     const authUserId = await requireUserId(params.authorization);
     const userId = params.userId ?? authUserId;

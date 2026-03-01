@@ -13,7 +13,7 @@ import {
 } from "../src/persistence/repo";
 
 export const create = api(
-  { expose: true, method: "POST", path: "/profiles.create" },
+  { expose: true, method: "POST", path: "/profiles/create" },
   async (params: {
     authorization?: Header<"Authorization">;
     displayName: string;
@@ -55,7 +55,7 @@ export const create = api(
 );
 
 export const get = api(
-  { expose: true, method: "GET", path: "/profiles.get" },
+  { expose: true, method: "GET", path: "/profiles/get" },
   async (params: { authorization?: Header<"Authorization">; profileId: string }) => {
     const userId = await requireUserId(params.authorization);
     const profile = await getProfileByUser(params.profileId, userId);
@@ -67,7 +67,7 @@ export const get = api(
 );
 
 export const list = api(
-  { expose: true, method: "GET", path: "/profiles.list" },
+  { expose: true, method: "GET", path: "/profiles/list" },
   async (params: { authorization?: Header<"Authorization"> }) => {
     const userId = await requireUserId(params.authorization);
     const profiles = await listProfilesByUser(userId);
@@ -84,7 +84,7 @@ export const list = api(
 );
 
 export const updateLanguage = api(
-  { expose: true, method: "PATCH", path: "/profiles.updateLanguage" },
+  { expose: true, method: "PATCH", path: "/profiles/update-language" },
   async (params: { authorization?: Header<"Authorization">; profileId: string; languageCode: "en" | "hi" | "te" | "ta" | "kn" | "ml"; languageMode: "auto" | "manual" }) => {
     const userId = await requireUserId(params.authorization);
     const profile = await getProfileByUser(params.profileId, userId);
@@ -96,7 +96,7 @@ export const updateLanguage = api(
 );
 
 export const updateCurrentCity = api(
-  { expose: true, method: "PATCH", path: "/profiles.updateCurrentCity" },
+  { expose: true, method: "PATCH", path: "/profiles/update-current-city" },
   async (params: { authorization?: Header<"Authorization">; profileId: string; cityText: string; lat: number; lon: number }) => {
     const userId = await requireUserId(params.authorization);
     const profile = await getProfileByUser(params.profileId, userId);
@@ -108,7 +108,7 @@ export const updateCurrentCity = api(
 );
 
 export const updateCalendarMode = api(
-  { expose: true, method: "PATCH", path: "/profiles.updateCalendarMode" },
+  { expose: true, method: "PATCH", path: "/profiles/update-calendar-mode" },
   async (params: { authorization?: Header<"Authorization">; profileId: string; calendarMode: "civil" | "vedic_sunrise" }) => {
     const userId = await requireUserId(params.authorization);
     const profile = await getProfileByUser(params.profileId, userId);

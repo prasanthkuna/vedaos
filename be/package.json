@@ -9,7 +9,8 @@
     "dev": "encore run",
     "start": "encore run",
     "typecheck": "bunx tsc --noEmit -p tsconfig.bun.json",
-    "lint": "bun run typecheck"
+    "lint": "bun run typecheck",
+    "smoke:api": "bun run scripts/smoke-api.ts"
   },
   "dependencies": {
     "@clerk/backend": "^2.33.0",

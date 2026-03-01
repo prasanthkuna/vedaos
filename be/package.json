@@ -17,11 +17,14 @@
   },
   "dependencies": {
     "@clerk/backend": "^2.33.0",
+    "astronomy-engine": "^2.1.19",
     "encore.dev": "^1.53.6",
+    "luxon": "^3.7.2",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/luxon": "^3.7.1",
     "typescript": "^5.9.2"
   }
 }

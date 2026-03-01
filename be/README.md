@@ -45,3 +45,7 @@ bun run typecheck
 - Data is persisted in Encore Postgres.
 - Story/rectification artifacts are stored in Encore object storage.
 - Billing verification and webhooks are stubs by design for this week.
+- MVP deterministic engine is active for v2 flows:
+  - sidereal graha positions, nakshatra/rashi, MD/AD/PD phase timeline, transit-aware weekly windows
+  - AI remains renderer over deterministic context
+- Next phase precision upgrades are tracked in [BE_MVP_STATUS_NEXT_PHASE.md](../BE_MVP_STATUS_NEXT_PHASE.md).

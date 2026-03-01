@@ -6,6 +6,7 @@ import {
   claimEvidence,
   claimClassesForYear,
   claimText,
+  cosmicSnapshotFromProfile,
   makeClaimId,
   phaseNextStep,
   phaseSegmentsForMode,
@@ -88,19 +89,33 @@ export const getHomeV2 = api(
       profile.birthTimeInputMode ?? (profile.birthTimeCertainty === "uncertain" ? "unknown" : "exact_time");
     const nextStep = phaseNextStep(inputMode, profile.rectificationCompleted);
 
-    const seed = `${profile.profileId}-${profile.dob}-${profile.rectifiedTobLocal ?? profile.tobLocal}-${profile.pobText}`;
-    const generated = phaseSegmentsForMode("quick5y", seed);
+    const generated = phaseSegmentsForMode("quick5y", {
+      dob: profile.dob,
+      tobLocal: profile.rectifiedTobLocal ?? profile.tobLocal,
+      tzIana: profile.tzIana,
+      lat: profile.lat,
+      lon: profile.lon,
+      pobText: profile.pobText,
+    });
     const dayStartUtc = params.dayStartUtc ?? new Date().toISOString();
-    const windows = weeklyWindows(dayStartUtc);
+    const windows = weeklyWindows(dayStartUtc, {
+      dob: profile.dob,
+      tobLocal: profile.rectifiedTobLocal ?? profile.tobLocal,
+      tzIana: profile.tzIana,
+      lat: profile.currentLat ?? profile.lat,
+      lon: profile.currentLon ?? profile.lon,
+      pobText: profile.currentCity ?? profile.pobText,
+    });
     const active = generated.active;
     const upcoming = generated.segments.find((s) => new Date(s.startUtc).getTime() > Date.now());
+    const snapshot = cosmicSnapshotFromProfile(profile, dayStartUtc);
 
     return {
       nextStep,
       today: {
         cosmicSnapshot: {
-          rashi: atmakarakaFromProfile(profile).planet,
-          nakshatra: "Context from deterministic core",
+          rashi: snapshot.rashi,
+          nakshatra: snapshot.nakshatra,
           activePhase: `${active.mdLord}-${active.adLord}-${active.pdLord}`,
         },
         nowActivePhase: {
@@ -166,7 +181,11 @@ export const submitRectification = api(
     const profile = await getProfileByUser(params.profileId, userId);
     if (!profile) throw APIError.notFound("profile_not_found");
 
-    const run = rectificationWindow(profile.tobLocal, params.answers.length);
+    const run = rectificationWindow(
+      profile.tobLocal,
+      params.answers.length,
+      profile.birthTimeInputMode ?? (profile.birthTimeCertainty === "uncertain" ? "unknown" : "exact_time"),
+    );
     const saved = await saveRectification({
       profileId: profile.profileId,
       windowStart: run.windowStart,
@@ -368,8 +387,14 @@ export const generateJourneyV2 = api(
       throw APIError.failedPrecondition("rectification_required_for_input_mode");
     }
 
-    const seed = `${profile.profileId}-${profile.dob}-${profile.rectifiedTobLocal ?? profile.tobLocal}-${profile.pobText}`;
-    const generated = phaseSegmentsForMode(params.mode, seed);
+    const generated = phaseSegmentsForMode(params.mode, {
+      dob: profile.dob,
+      tobLocal: profile.rectifiedTobLocal ?? profile.tobLocal,
+      tzIana: profile.tzIana,
+      lat: profile.lat,
+      lon: profile.lon,
+      pobText: profile.pobText,
+    });
     const explanationMode = params.explanationMode ?? "simple";
 
     let aiNarrative;
@@ -479,7 +504,14 @@ export const generateWeekly = api(
       throw APIError.invalidArgument("current_city_required");
     }
 
-    const windows = weeklyWindows(params.weekStartUtc);
+    const windows = weeklyWindows(params.weekStartUtc, {
+      dob: profile.dob,
+      tobLocal: profile.rectifiedTobLocal ?? profile.tobLocal,
+      tzIana: profile.tzIana,
+      lat: profile.currentLat ?? profile.lat,
+      lon: profile.currentLon ?? profile.lon,
+      pobText: profile.currentCity ?? profile.pobText,
+    });
     let ai;
     try {
       ai = await generateWeeklyNarrative({

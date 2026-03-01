@@ -15,7 +15,7 @@ const buildUnlock = (input: {
   yearCoverage: number;
   diversityScore: number;
   futureUnlocked: boolean;
-  highRiskBlocked: boolean;
+  rectificationBlocked: boolean;
 }) => {
   const reasons: string[] = [];
   const nextSteps: string[] = [];
@@ -23,7 +23,7 @@ const buildUnlock = (input: {
     input.validatedCount >= 6 &&
     input.yearCoverage >= 3 &&
     input.diversityScore >= 50 &&
-    !input.highRiskBlocked;
+    !input.rectificationBlocked;
 
   if (input.validatedCount < 6) {
     reasons.push("need_more_validations");
@@ -37,9 +37,9 @@ const buildUnlock = (input: {
     reasons.push("need_more_claim_diversity");
     nextSteps.push("Include both event and non-event claims.");
   }
-  if (input.highRiskBlocked) {
+  if (input.rectificationBlocked) {
     reasons.push("rectification_required");
-    nextSteps.push("Complete baseline rectification to remove high-risk lock.");
+    nextSteps.push("Complete rectification because birth time is uncertain.");
   }
 
   return {
@@ -107,7 +107,7 @@ export const validateClaim = api(
         yearCoverage: score.yearCoverage,
         diversityScore: score.diversityScore,
         futureUnlocked: score.futureUnlocked,
-        highRiskBlocked: profile.birthTimeRiskLevel === "high" && !profile.rectificationCompleted,
+        rectificationBlocked: profile.birthTimeCertainty === "uncertain" && !profile.rectificationCompleted,
       }),
     };
   },
@@ -129,7 +129,7 @@ export const getScores = api(
         yearCoverage: score.yearCoverage,
         diversityScore: score.diversityScore,
         futureUnlocked: score.futureUnlocked,
-        highRiskBlocked: profile.birthTimeRiskLevel === "high" && !profile.rectificationCompleted,
+        rectificationBlocked: profile.birthTimeCertainty === "uncertain" && !profile.rectificationCompleted,
       }),
     };
   },

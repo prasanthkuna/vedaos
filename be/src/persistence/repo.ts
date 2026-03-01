@@ -420,8 +420,8 @@ export const recomputeScores = async (profileId: string): Promise<ScoreRow> => {
   const pcs = round2(Math.min(100, (triggerHits / Math.max(1, validatedCount)) * 100));
 
   const profile = await getProfile(profileId);
-  const highRiskBlocked = profile?.birthTimeRiskLevel === "high" && !profile.rectificationCompleted;
-  const futureUnlocked = validatedCount >= 10 && yearCoverage >= 4 && diversityScore >= 50 && psa >= 75 && !highRiskBlocked;
+  const rectificationBlocked = profile?.birthTimeCertainty === "uncertain" && !profile.rectificationCompleted;
+  const futureUnlocked = validatedCount >= 10 && yearCoverage >= 4 && diversityScore >= 50 && psa >= 75 && !rectificationBlocked;
 
   await vedaDB.exec`
     INSERT INTO veda_score_snapshots (

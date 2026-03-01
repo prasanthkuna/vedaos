@@ -41,10 +41,12 @@ export const assessRisk = api(
     const result = assessRiskFromTob(profile.rectifiedTobLocal ?? profile.tobLocal);
     await setProfileRisk(profile.profileId, result.riskLevel);
 
+    const rectificationRequired = profile.birthTimeCertainty === "uncertain" && !profile.rectificationCompleted;
+
     return {
       riskLevel: result.riskLevel,
       boundaryDistance: result.boundaryDistance,
-      rectificationRequired: result.riskLevel === "high",
+      rectificationRequired,
       details: {
         method: "moon_boundary_proximity_v1",
         certaintyInput: profile.birthTimeCertainty,
@@ -216,12 +218,12 @@ export const generateStory = api(
               score.validatedCount >= 6 &&
               score.yearCoverage >= 3 &&
               score.diversityScore >= 50 &&
-              !(profile.birthTimeRiskLevel === "high" && !profile.rectificationCompleted),
+              !(profile.birthTimeCertainty === "uncertain" && !profile.rectificationCompleted),
             guardrails: {
               minValidatedCount: 6,
               minYearCoverage: 3,
               minDiversityScore: 50,
-              highRiskNeedsRectification: true,
+              highRiskNeedsRectification: false,
             },
           }
         : null;

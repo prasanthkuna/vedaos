@@ -14,8 +14,6 @@ encore secret set --type dev,local NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 encore secret set --type dev,local CLERK_SECRET_KEY
 encore secret set --type dev,local PIIEncryptionKey
 encore secret set --type dev,local OpenAIAPIKey
-encore secret set --type dev,local GeminiAPIKey
-encore secret set --type dev,local XAIAPIKey
 ```
 
 AI provider defaults:
@@ -23,6 +21,7 @@ AI provider defaults:
 - `OPENAI_MODEL=gpt-5`
 - `GEMINI_MODEL=gemini-2.5-flash`
 - `GROK_MODEL=grok-4-0709`
+- Optional provider env vars (only needed if selected): `GEMINI_API_KEY`, `XAI_API_KEY`
 
 ## Run and Check
 

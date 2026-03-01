@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { GEMINI_API_KEY, OPENAI_API_KEY, XAI_API_KEY } from "../config/secrets";
+import { OPENAI_API_KEY } from "../config/secrets";
 import type { PhaseSegment } from "./engine";
 
 type AIProvider = "openai" | "gemini" | "grok";
@@ -134,13 +134,15 @@ const connectorOpenAI = async (prompt: string): Promise<string> => {
 };
 
 const connectorGemini = async (prompt: string): Promise<string> => {
+  const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!geminiApiKey) throw new Error("missing_provider_key:GEMINI_API_KEY");
   const model = modelFromEnv("gemini");
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-goog-api-key": GEMINI_API_KEY(),
+      "x-goog-api-key": geminiApiKey,
     },
     body: JSON.stringify({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -158,11 +160,13 @@ const connectorGemini = async (prompt: string): Promise<string> => {
 };
 
 const connectorGrok = async (prompt: string): Promise<string> => {
+  const xaiApiKey = process.env.XAI_API_KEY?.trim();
+  if (!xaiApiKey) throw new Error("missing_provider_key:XAI_API_KEY");
   const response = await fetch("https://api.x.ai/v1/chat/completions", {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${XAI_API_KEY()}`,
+      authorization: `Bearer ${xaiApiKey}`,
     },
     body: JSON.stringify({
       model: modelFromEnv("grok"),

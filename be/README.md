@@ -13,7 +13,16 @@ bun install
 encore secret set --type dev,local NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 encore secret set --type dev,local CLERK_SECRET_KEY
 encore secret set --type dev,local PIIEncryptionKey
+encore secret set --type dev,local OpenAIAPIKey
+encore secret set --type dev,local GeminiAPIKey
+encore secret set --type dev,local XAIAPIKey
 ```
+
+AI provider defaults:
+- `AI_PROVIDER=openai` (default)
+- `OPENAI_MODEL=gpt-5`
+- `GEMINI_MODEL=gemini-2.5-flash`
+- `GROK_MODEL=grok-4-0709`
 
 ## Run and Check
 

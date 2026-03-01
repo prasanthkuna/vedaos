@@ -173,6 +173,30 @@ const run = async () => {
   const firstClaimId = quick.feed.years[0]?.points[0]?.claimId;
   assert(Boolean(firstClaimId), "quick_claim_missing");
 
+  const homeV2 = await request<{
+    nextStep: "proceed" | "rectification_required" | "rectification_optional";
+    today: { nowActivePhase: { md: string; ad: string; pd: string } };
+  }>({
+    path: "/engine/home-v2",
+    method: "GET",
+    token,
+    query: { profileId },
+  });
+  assert(["proceed", "rectification_required", "rectification_optional"].includes(homeV2.nextStep), "home_v2_next_step_invalid");
+  assert(Boolean(homeV2.today.nowActivePhase.md), "home_v2_phase_missing");
+
+  const journeyV2 = await request<{
+    phaseRunId: string;
+    journey: { segments: Array<{ segmentId: string; narrative: { phaseMeaning: string } }> };
+  }>({
+    path: "/engine/generate-journey-v2",
+    method: "POST",
+    token,
+    body: { profileId, mode: "quick5y" },
+  });
+  assert(Boolean(journeyV2.phaseRunId), "journey_v2_run_missing");
+  assert(journeyV2.journey.segments.length > 0, "journey_v2_segments_missing");
+
   const validation = await request<{
     validatedCount: number;
     unlock: { quickProofEligible: boolean };

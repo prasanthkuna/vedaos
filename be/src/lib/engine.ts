@@ -139,4 +139,113 @@ export const weeklyWindows = (weekStartUtc: string) => {
   };
 };
 
+type JourneyMode = "quick5y" | "full15y";
+type PhaseLevel = "md" | "ad" | "pd";
+
+export type PhaseSegment = {
+  phaseSegmentId: string;
+  level: PhaseLevel;
+  mdLord: string;
+  adLord?: string;
+  pdLord?: string;
+  startUtc: string;
+  endUtc: string;
+  ord: number;
+  confidenceBand: "high" | "medium" | "low";
+  highlights: Array<{
+    phaseHighlightId: string;
+    title: string;
+    detail: string;
+    triggerType: string;
+    triggerRef?: string;
+  }>;
+};
+
+const addMonths = (d: Date, months: number): Date => {
+  const out = new Date(d);
+  out.setUTCMonth(out.getUTCMonth() + months);
+  return out;
+};
+
+const formatPhaseTitle = (md: string, ad: string, pd: string): string => `${md} Mahadasha - ${ad} Antardasha - ${pd} Pratyantar`;
+
+const makePhaseHighlights = (seed: string, md: string, ad: string, pd: string, idx: number) => {
+  const house = pickHouse(`${seed}-phase-${idx}`);
+  const trigger = idx % 2 === 0 ? "saturn_jupiter_double_transit" : "moon_mars_trigger";
+
+  return [
+    {
+      phaseHighlightId: makeId("phh"),
+      title: formatPhaseTitle(md, ad, pd),
+      detail:
+        trigger === "saturn_jupiter_double_transit"
+          ? `Saturn and Jupiter jointly emphasized ${house} house themes, creating structural movement.`
+          : `Moon and Mars trigger windows intensified ${house} house outcomes in short bursts.`,
+      triggerType: trigger,
+      triggerRef: house,
+    },
+  ];
+};
+
+export const phaseSegmentsForMode = (mode: JourneyMode, seed: string): {
+  startUtc: string;
+  endUtc: string;
+  asOfUtc: string;
+  segments: PhaseSegment[];
+  active: { mdLord: string; adLord: string; pdLord: string; startUtc: string; endUtc: string };
+} => {
+  const now = new Date();
+  const spanYears = mode === "quick5y" ? 5 : 15;
+  const segmentCount = mode === "quick5y" ? 10 : 30;
+  const segmentMonths = Math.max(3, Math.floor((spanYears * 12) / segmentCount));
+  const start = addMonths(now, -(segmentMonths * segmentCount));
+  const segments: PhaseSegment[] = [];
+
+  for (let i = 0; i < segmentCount; i += 1) {
+    const segStart = addMonths(start, i * segmentMonths);
+    const segEnd = addMonths(start, (i + 1) * segmentMonths);
+    const md = pick(DASHA_LORDS, `${seed}-md-${i}`);
+    const ad = pick(DASHA_LORDS, `${seed}-ad-${i}`);
+    const pd = pick(DASHA_LORDS, `${seed}-pd-${i}`);
+    const confidenceBand = i % 5 === 0 ? "high" : i % 3 === 0 ? "medium" : "high";
+
+    segments.push({
+      phaseSegmentId: makeId("phs"),
+      level: "pd",
+      mdLord: md,
+      adLord: ad,
+      pdLord: pd,
+      startUtc: segStart.toISOString(),
+      endUtc: segEnd.toISOString(),
+      ord: i + 1,
+      confidenceBand,
+      highlights: makePhaseHighlights(seed, md, ad, pd, i),
+    });
+  }
+
+  const active = segments[Math.max(0, segments.length - 1)];
+  return {
+    startUtc: segments[0]?.startUtc ?? start.toISOString(),
+    endUtc: segments[segments.length - 1]?.endUtc ?? now.toISOString(),
+    asOfUtc: now.toISOString(),
+    segments,
+    active: {
+      mdLord: active?.mdLord ?? "Saturn",
+      adLord: active?.adLord ?? "Mercury",
+      pdLord: active?.pdLord ?? "Moon",
+      startUtc: active?.startUtc ?? now.toISOString(),
+      endUtc: active?.endUtc ?? now.toISOString(),
+    },
+  };
+};
+
+export const phaseNextStep = (
+  birthTimeInputMode: "exact_time" | "six_window_approx" | "nakshatra_only" | "unknown",
+  rectificationCompleted: boolean,
+) => {
+  if (birthTimeInputMode === "exact_time") return "proceed" as const;
+  if (rectificationCompleted) return "rectification_optional" as const;
+  return "rectification_required" as const;
+};
+
 export { claimText };

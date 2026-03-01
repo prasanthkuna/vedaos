@@ -18,11 +18,15 @@ export const create = api(
     authorization?: Header<"Authorization">;
     displayName: string;
     dob: string;
-    tobLocal: string;
+    tobLocal?: string;
     pobText: string;
     tzIana: string;
     lat?: number;
     lon?: number;
+    birthTimeInputMode?: "exact_time" | "six_window_approx" | "nakshatra_only" | "unknown";
+    birthTimeWindowCode?: string;
+    birthNakshatraHint?: string;
+    birthTimeNotes?: string;
     birthTimeCertainty: "verified" | "confident" | "uncertain";
     isGuestProfile?: boolean;
   }) => {
@@ -46,6 +50,10 @@ export const create = api(
       tzIana: params.tzIana,
       lat: params.lat,
       lon: params.lon,
+      birthTimeInputMode: params.birthTimeInputMode,
+      birthTimeWindowCode: params.birthTimeWindowCode,
+      birthNakshatraHint: params.birthNakshatraHint,
+      birthTimeNotes: params.birthTimeNotes,
       birthTimeCertainty: params.birthTimeCertainty,
       isGuestProfile: isGuest,
     });

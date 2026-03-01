@@ -10,6 +10,11 @@ import {
 } from "../src/persistence/repo";
 import { enforceRateLimit } from "../src/lib/rate-limit";
 
+const isRectificationBlocked = (profile: { birthTimeInputMode?: string; birthTimeCertainty: string; rectificationCompleted: boolean }) => {
+  const inputMode = profile.birthTimeInputMode ?? (profile.birthTimeCertainty === "uncertain" ? "unknown" : "exact_time");
+  return inputMode !== "exact_time" && !profile.rectificationCompleted;
+};
+
 const buildUnlock = (input: {
   validatedCount: number;
   yearCoverage: number;
@@ -39,7 +44,7 @@ const buildUnlock = (input: {
   }
   if (input.rectificationBlocked) {
     reasons.push("rectification_required");
-    nextSteps.push("Complete rectification because birth time is uncertain.");
+    nextSteps.push("Complete rectification because birth-time mode is approximate or unknown.");
   }
 
   return {
@@ -107,7 +112,7 @@ export const validateClaim = api(
         yearCoverage: score.yearCoverage,
         diversityScore: score.diversityScore,
         futureUnlocked: score.futureUnlocked,
-        rectificationBlocked: profile.birthTimeCertainty === "uncertain" && !profile.rectificationCompleted,
+        rectificationBlocked: isRectificationBlocked(profile),
       }),
     };
   },
@@ -129,7 +134,7 @@ export const getScores = api(
         yearCoverage: score.yearCoverage,
         diversityScore: score.diversityScore,
         futureUnlocked: score.futureUnlocked,
-        rectificationBlocked: profile.birthTimeCertainty === "uncertain" && !profile.rectificationCompleted,
+        rectificationBlocked: isRectificationBlocked(profile),
       }),
     };
   },

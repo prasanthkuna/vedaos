@@ -7,6 +7,8 @@ import {
   claimClassesForYear,
   claimText,
   makeClaimId,
+  phaseNextStep,
+  phaseSegmentsForMode,
   rectificationWindow,
   weeklyTheme,
   weeklyWindows,
@@ -17,11 +19,14 @@ import {
   getProfileByUser,
   getRectificationPrompts as getRectificationPromptsRepo,
   getScores,
+  saveNarrativeRun,
+  savePhaseJourneyRun,
   saveRectification,
   saveStoryRun,
   setProfileRisk,
 } from "../src/persistence/repo";
 import { enforceRateLimit } from "../src/lib/rate-limit";
+import { generateForecastNarrative, generateJourneyNarrative, generateWeeklyNarrative } from "../src/lib/journey-ai";
 
 const assertProAccess = async (userId: string) => {
   const ent = await getEntitlements(userId);
@@ -40,16 +45,20 @@ export const assessRisk = api(
 
     const result = assessRiskFromTob(profile.rectifiedTobLocal ?? profile.tobLocal);
     await setProfileRisk(profile.profileId, result.riskLevel);
-
-    const rectificationRequired = profile.birthTimeCertainty === "uncertain" && !profile.rectificationCompleted;
+    const inputMode =
+      profile.birthTimeInputMode ?? (profile.birthTimeCertainty === "uncertain" ? "unknown" : "exact_time");
+    const nextStep = phaseNextStep(inputMode, profile.rectificationCompleted);
+    const rectificationRequired = nextStep === "rectification_required";
 
     return {
       riskLevel: result.riskLevel,
       boundaryDistance: result.boundaryDistance,
       rectificationRequired,
+      nextStep,
       details: {
         method: "moon_boundary_proximity_v1",
         certaintyInput: profile.birthTimeCertainty,
+        inputMode,
       },
     };
   },
@@ -64,6 +73,59 @@ export const getAtmakarakaPrimer = api(
     if (!profile) throw APIError.notFound("profile_not_found");
 
     return atmakarakaFromProfile(profile);
+  },
+);
+
+export const getHomeV2 = api(
+  { expose: true, method: "GET", path: "/engine/home-v2" },
+  async (params: { authorization?: Header<"Authorization">; profileId: string; dayStartUtc?: string }) => {
+    const userId = await requireUserId(params.authorization);
+    enforceRateLimit(`homev2:${userId}`, 30, 60_000);
+    const profile = await getProfileByUser(params.profileId, userId);
+    if (!profile) throw APIError.notFound("profile_not_found");
+
+    const inputMode =
+      profile.birthTimeInputMode ?? (profile.birthTimeCertainty === "uncertain" ? "unknown" : "exact_time");
+    const nextStep = phaseNextStep(inputMode, profile.rectificationCompleted);
+
+    const seed = `${profile.profileId}-${profile.dob}-${profile.rectifiedTobLocal ?? profile.tobLocal}-${profile.pobText}`;
+    const generated = phaseSegmentsForMode("quick5y", seed);
+    const dayStartUtc = params.dayStartUtc ?? new Date().toISOString();
+    const windows = weeklyWindows(dayStartUtc);
+    const active = generated.active;
+    const upcoming = generated.segments.find((s) => new Date(s.startUtc).getTime() > Date.now());
+
+    return {
+      nextStep,
+      today: {
+        cosmicSnapshot: {
+          rashi: atmakarakaFromProfile(profile).planet,
+          nakshatra: "Context from deterministic core",
+          activePhase: `${active.mdLord}-${active.adLord}-${active.pdLord}`,
+        },
+        nowActivePhase: {
+          md: active.mdLord,
+          ad: active.adLord,
+          pd: active.pdLord,
+          startUtc: active.startUtc,
+          endUtc: active.endUtc,
+        },
+        windows: {
+          support: windows.support,
+          caution: windows.friction,
+        },
+        upaya: {
+          title: "Today's steadying upaya",
+          instruction: "Start one key task during support windows and avoid emotional decisions in caution windows.",
+        },
+        upcomingShift: upcoming
+          ? {
+              startsAtUtc: upcoming.startUtc,
+              phase: `${upcoming.mdLord}-${upcoming.adLord}-${upcoming.pdLord ?? ""}`.replace(/-$/, ""),
+            }
+          : null,
+      },
+    };
   },
 );
 
@@ -188,6 +250,9 @@ export const generateStory = api(
     }
 
     const score = await getScores(profile.profileId);
+    const inputMode =
+      profile.birthTimeInputMode ?? (profile.birthTimeCertainty === "uncertain" ? "unknown" : "exact_time");
+    const nextStep = phaseNextStep(inputMode, profile.rectificationCompleted);
 
     const feed = {
       engineVersion: "v0.1",
@@ -218,7 +283,7 @@ export const generateStory = api(
               score.validatedCount >= 6 &&
               score.yearCoverage >= 3 &&
               score.diversityScore >= 50 &&
-              !(profile.birthTimeCertainty === "uncertain" && !profile.rectificationCompleted),
+              nextStep !== "rectification_required",
             guardrails: {
               minValidatedCount: 6,
               minYearCoverage: 3,
@@ -232,6 +297,7 @@ export const generateStory = api(
       runId: run.runId,
       feed,
       quickProof,
+      nextStep,
     };
   },
 );
@@ -245,20 +311,157 @@ export const generateForecast12m = api(
     const profile = await getProfileByUser(params.profileId, userId);
     if (!profile) throw APIError.notFound("profile_not_found");
     const score = await getScores(profile.profileId);
-    const tone =
-      score.psa >= 80 ? "momentum and confident execution" : score.psa >= 60 ? "measured progress and calibration" : "consolidation and patience";
+    const context = {
+      birthTimeInputMode: profile.birthTimeInputMode ?? "exact_time",
+      birthTimeRiskLevel: profile.birthTimeRiskLevel ?? "safe",
+      score: {
+        validatedCount: score.validatedCount,
+        yearCoverage: score.yearCoverage,
+        diversityScore: score.diversityScore,
+        futureUnlocked: score.futureUnlocked,
+      },
+    };
+    let ai;
+    try {
+      ai = await generateForecastNarrative({
+        languageCode: profile.languageCode,
+        profileContext: context,
+      });
+    } catch (error) {
+      throw APIError.unavailable(error instanceof Error ? error.message : "forecast_generation_failed");
+    }
 
     return {
       forecastRunId: `fct_${Date.now()}`,
+      provider: ai.provider,
+      promptVersion: ai.promptVersion,
       forecast: {
-        summary: `12-month outlook tuned to your validated pattern strength (${tone}).`,
+        summary: ai.summary,
         windows: [
-          { period: "Q1", theme: tone },
-          { period: "Q2", theme: profile.birthTimeRiskLevel === "high" ? "verify major decisions before commitment" : "expansion with structure" },
-          { period: "Q3", theme: score.diversityScore >= 50 ? "balanced growth across priorities" : "focus on one core axis" },
-          { period: "Q4", theme: score.futureUnlocked ? "harvest and scale" : "stability and groundwork" },
+          { period: "Q1", theme: ai.q1 },
+          { period: "Q2", theme: ai.q2 },
+          { period: "Q3", theme: ai.q3 },
+          { period: "Q4", theme: ai.q4 },
         ],
       },
+    };
+  },
+);
+
+export const generateJourneyV2 = api(
+  { expose: true, method: "POST", path: "/engine/generate-journey-v2" },
+  async (params: {
+    authorization?: Header<"Authorization">;
+    profileId: string;
+    mode: "quick5y" | "full15y";
+    explanationMode?: "simple" | "traditional";
+  }) => {
+    const userId = await requireUserId(params.authorization);
+    enforceRateLimit(`journeyv2:${userId}`, 12, 60_000);
+    const profile = await getProfileByUser(params.profileId, userId);
+    if (!profile) throw APIError.notFound("profile_not_found");
+
+    const inputMode =
+      profile.birthTimeInputMode ?? (profile.birthTimeCertainty === "uncertain" ? "unknown" : "exact_time");
+    const nextStep = phaseNextStep(inputMode, profile.rectificationCompleted);
+    if (nextStep === "rectification_required") {
+      throw APIError.failedPrecondition("rectification_required_for_input_mode");
+    }
+
+    const seed = `${profile.profileId}-${profile.dob}-${profile.rectifiedTobLocal ?? profile.tobLocal}-${profile.pobText}`;
+    const generated = phaseSegmentsForMode(params.mode, seed);
+    const explanationMode = params.explanationMode ?? "simple";
+
+    let aiNarrative;
+    try {
+      aiNarrative = await generateJourneyNarrative({
+        languageCode: profile.languageCode,
+        explanationMode,
+        segments: generated.segments,
+      });
+    } catch (error) {
+      throw APIError.unavailable(error instanceof Error ? error.message : "narrative_generation_failed");
+    }
+
+    const feed = {
+      engineVersion: "v2.0",
+      mode: params.mode,
+      nextStep,
+      activePhaseRefs: {
+        md: generated.active.mdLord,
+        ad: generated.active.adLord,
+        pd: generated.active.pdLord,
+        startUtc: generated.active.startUtc,
+        endUtc: generated.active.endUtc,
+      },
+      dateWindows: generated.segments.map((segment) => ({
+        segmentId: segment.phaseSegmentId,
+        startUtc: segment.startUtc,
+        endUtc: segment.endUtc,
+      })),
+      segments: generated.segments.map((segment, idx) => ({
+        segmentId: segment.phaseSegmentId,
+        level: segment.level,
+        md: segment.mdLord,
+        ad: segment.adLord ?? null,
+        pd: segment.pdLord ?? null,
+        startUtc: segment.startUtc,
+        endUtc: segment.endUtc,
+        confidenceBand: segment.confidenceBand,
+        narrative: {
+          phaseMeaning: aiNarrative.blocks[idx]?.phaseMeaning ?? "",
+          likelyManifestation: aiNarrative.blocks[idx]?.likelyManifestation ?? "",
+          caution: aiNarrative.blocks[idx]?.caution ?? "",
+          action: aiNarrative.blocks[idx]?.action ?? "",
+          timingReference: aiNarrative.blocks[idx]?.timingReference ?? `${segment.startUtc} -> ${segment.endUtc}`,
+        },
+        keyTransitTriggers: segment.highlights.map((h) => ({
+          type: h.triggerType,
+          ref: h.triggerRef ?? null,
+        })),
+      })),
+    };
+
+    const saved = await savePhaseJourneyRun({
+      profileId: profile.profileId,
+      mode: params.mode,
+      engineVersion: "v2.0",
+      startUtc: generated.startUtc,
+      endUtc: generated.endUtc,
+      asOfUtc: generated.asOfUtc,
+      feed,
+      segments: generated.segments,
+    });
+    const narrativeRunId = await saveNarrativeRun({
+      profileId: profile.profileId,
+      phaseRunId: saved.phaseRunId,
+      engineVersion: "v2.0",
+      provider: aiNarrative.provider,
+      promptVersion: aiNarrative.promptVersion,
+      languageCode: profile.languageCode,
+      explanationMode,
+      groundingPassed: true,
+      blocks: generated.segments.map((segment, idx) => ({
+        phaseSegmentId: segment.phaseSegmentId,
+        title: aiNarrative.blocks[idx]?.phaseMeaning ?? "",
+        body: aiNarrative.blocks[idx]?.likelyManifestation ?? "",
+        actionLine: aiNarrative.blocks[idx]?.action ?? "",
+        cautionLine: aiNarrative.blocks[idx]?.caution ?? "",
+        timingRef: aiNarrative.blocks[idx]?.timingReference ?? `${segment.startUtc} -> ${segment.endUtc}`,
+        whyFactors: {
+          md: segment.mdLord,
+          ad: segment.adLord ?? null,
+          pd: segment.pdLord ?? null,
+          triggers: segment.highlights.map((h) => ({ type: h.triggerType, ref: h.triggerRef ?? null })),
+        },
+      })),
+    });
+
+    return {
+      phaseRunId: saved.phaseRunId,
+      narrativeRunId,
+      provider: aiNarrative.provider,
+      journey: feed,
     };
   },
 );
@@ -277,17 +480,30 @@ export const generateWeekly = api(
     }
 
     const windows = weeklyWindows(params.weekStartUtc);
+    let ai;
+    try {
+      ai = await generateWeeklyNarrative({
+        languageCode: profile.languageCode,
+        city: profile.currentCity,
+        weekStartUtc: params.weekStartUtc,
+        windows,
+      });
+    } catch (error) {
+      throw APIError.unavailable(error instanceof Error ? error.message : "weekly_generation_failed");
+    }
 
     return {
       weekly: {
         weekStartUtc: params.weekStartUtc,
-        theme: weeklyTheme(params.weekStartUtc),
+        theme: ai.theme || weeklyTheme(params.weekStartUtc),
+        provider: ai.provider,
+        promptVersion: ai.promptVersion,
         frictionWindows: windows.friction,
         supportWindows: windows.support,
         muhurthaLite: windows.muhurthaLite,
         upaya: {
-          title: "Weekly grounding upaya",
-          instruction: "Offer water to Surya in the morning and avoid reactive communication after sunset.",
+          title: ai.upayaTitle,
+          instruction: ai.upayaInstruction,
           disclaimerKey: "upaya_non_guaranteed",
         },
       },

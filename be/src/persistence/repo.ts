@@ -3,6 +3,7 @@ import { artifactsBucket } from "../../storage";
 import { makeId } from "../lib/id";
 import { decryptPII, encryptPII } from "../lib/crypto";
 import type {
+  BirthTimeInputMode,
   CalendarMode,
   ConfidenceLevel,
   LanguageCode,
@@ -24,6 +25,10 @@ export type ProfileRecord = {
   tzIana: string;
   lat?: number;
   lon?: number;
+  birthTimeInputMode: BirthTimeInputMode;
+  birthTimeWindowCode?: string;
+  birthNakshatraHint?: string;
+  birthTimeNotes?: string;
   birthTimeCertainty: "verified" | "confident" | "uncertain";
   languageCode: LanguageCode;
   languageMode: LanguageMode;
@@ -67,6 +72,12 @@ const mapProfile = (row: Record<string, any>): ProfileRecord => ({
   tzIana: row.tz_iana,
   lat: row.lat ?? undefined,
   lon: row.lon ?? undefined,
+  birthTimeInputMode:
+    row.birth_time_input_mode ??
+    (row.birth_time_certainty === "uncertain" ? "unknown" : "exact_time"),
+  birthTimeWindowCode: row.birth_time_window_code ?? undefined,
+  birthNakshatraHint: row.birth_nakshatra_hint ?? undefined,
+  birthTimeNotes: row.birth_time_notes ?? undefined,
   birthTimeCertainty: row.birth_time_certainty,
   languageCode: row.language_code,
   languageMode: row.language_mode,
@@ -109,24 +120,31 @@ export const createProfile = async (input: {
   userId: string;
   displayName: string;
   dob: string;
-  tobLocal: string;
+  tobLocal?: string;
   pobText: string;
   tzIana: string;
   lat?: number;
   lon?: number;
+  birthTimeInputMode?: BirthTimeInputMode;
+  birthTimeWindowCode?: string;
+  birthNakshatraHint?: string;
+  birthTimeNotes?: string;
   birthTimeCertainty: "verified" | "confident" | "uncertain";
   isGuestProfile: boolean;
 }): Promise<string> => {
   const profileId = makeId("pro");
+  const safeTobLocal = input.tobLocal && input.tobLocal.trim().length > 0 ? input.tobLocal : "12:00";
 
   await vedaDB.exec`
     INSERT INTO veda_profiles (
       profile_id, user_id, display_name, dob, tob_local, pob_text, tz_iana,
-      lat, lon, birth_time_certainty, language_code, language_mode, calendar_mode,
+      lat, lon, birth_time_input_mode, birth_time_window_code, birth_nakshatra_hint, birth_time_notes, birth_time_certainty, language_code, language_mode, calendar_mode,
       is_guest_profile, rectification_completed, created_at, updated_at
     ) VALUES (
-      ${profileId}, ${input.userId}, ${input.displayName}, ${encryptPII(input.dob)}, ${encryptPII(input.tobLocal)}, ${encryptPII(input.pobText)}, ${input.tzIana},
-      ${input.lat ?? null}, ${input.lon ?? null}, ${input.birthTimeCertainty}, 'en', 'auto', 'civil',
+      ${profileId}, ${input.userId}, ${input.displayName}, ${encryptPII(input.dob)}, ${encryptPII(safeTobLocal)}, ${encryptPII(input.pobText)}, ${input.tzIana},
+      ${input.lat ?? null}, ${input.lon ?? null}, ${input.birthTimeInputMode ?? (input.birthTimeCertainty === "uncertain" ? "unknown" : "exact_time")},
+      ${input.birthTimeWindowCode ?? null}, ${input.birthNakshatraHint ?? null}, ${input.birthTimeNotes ?? null},
+      ${input.birthTimeCertainty}, 'en', 'auto', 'civil',
       ${input.isGuestProfile}, false, NOW(), NOW()
     )
   `;
@@ -304,6 +322,115 @@ export const saveStoryRun = async (input: {
   return { runId, feedKey };
 };
 
+export const savePhaseJourneyRun = async (input: {
+  profileId: string;
+  mode: "quick5y" | "full15y";
+  engineVersion: string;
+  startUtc: string;
+  endUtc: string;
+  asOfUtc: string;
+  feed: unknown;
+  segments: Array<{
+    phaseSegmentId: string;
+    level: "md" | "ad" | "pd";
+    mdLord: string;
+    adLord?: string;
+    pdLord?: string;
+    startUtc: string;
+    endUtc: string;
+    ord: number;
+    confidenceBand: "high" | "medium" | "low";
+    highlights: Array<{
+      phaseHighlightId: string;
+      title: string;
+      detail: string;
+      triggerType: string;
+      triggerRef?: string;
+    }>;
+  }>;
+}): Promise<{ phaseRunId: string; feedKey: string }> => {
+  const phaseRunId = makeId("phr");
+  const feedKey = `phase/${input.profileId}/${phaseRunId}.json`;
+
+  await artifactsBucket.upload(feedKey, Buffer.from(JSON.stringify(input.feed, null, 2)), {
+    contentType: "application/json",
+  });
+
+  await vedaDB.exec`
+    INSERT INTO veda_phase_runs (phase_run_id, profile_id, source_mode, engine_version, start_utc, end_utc, as_of_utc, created_at)
+    VALUES (${phaseRunId}, ${input.profileId}, ${input.mode}, ${input.engineVersion}, ${input.startUtc}, ${input.endUtc}, ${input.asOfUtc}, NOW())
+  `;
+
+  for (const segment of input.segments) {
+    await vedaDB.exec`
+      INSERT INTO veda_phase_segments (
+        phase_segment_id, phase_run_id, profile_id, level, md_lord, ad_lord, pd_lord,
+        start_utc, end_utc, ord, confidence_band, created_at
+      ) VALUES (
+        ${segment.phaseSegmentId}, ${phaseRunId}, ${input.profileId}, ${segment.level}, ${segment.mdLord}, ${segment.adLord ?? null}, ${segment.pdLord ?? null},
+        ${segment.startUtc}, ${segment.endUtc}, ${segment.ord}, ${segment.confidenceBand}, NOW()
+      )
+    `;
+
+    for (const highlight of segment.highlights) {
+      await vedaDB.exec`
+        INSERT INTO veda_phase_highlights (
+          phase_highlight_id, phase_segment_id, profile_id, title, detail, trigger_type, trigger_ref, created_at
+        ) VALUES (
+          ${highlight.phaseHighlightId}, ${segment.phaseSegmentId}, ${input.profileId}, ${highlight.title}, ${highlight.detail}, ${highlight.triggerType}, ${highlight.triggerRef ?? null}, NOW()
+        )
+      `;
+    }
+  }
+
+  return { phaseRunId, feedKey };
+};
+
+export const saveNarrativeRun = async (input: {
+  profileId: string;
+  phaseRunId: string;
+  engineVersion: string;
+  provider: string;
+  promptVersion: string;
+  languageCode: string;
+  explanationMode: "simple" | "traditional";
+  groundingPassed: boolean;
+  blocks: Array<{
+    phaseSegmentId: string;
+    title: string;
+    body: string;
+    actionLine: string;
+    cautionLine: string;
+    timingRef: string;
+    whyFactors: Record<string, unknown>;
+  }>;
+}): Promise<string> => {
+  const narrativeRunId = makeId("nrr");
+  await vedaDB.exec`
+    INSERT INTO veda_narrative_runs (
+      narrative_run_id, profile_id, phase_run_id, engine_version, provider, prompt_version,
+      language_code, explanation_mode, grounding_passed, created_at
+    ) VALUES (
+      ${narrativeRunId}, ${input.profileId}, ${input.phaseRunId}, ${input.engineVersion}, ${input.provider}, ${input.promptVersion},
+      ${input.languageCode}, ${input.explanationMode}, ${input.groundingPassed}, NOW()
+    )
+  `;
+
+  for (const block of input.blocks) {
+    const narrativeBlockId = makeId("nrb");
+    await vedaDB.exec`
+      INSERT INTO veda_narrative_blocks (
+        narrative_block_id, narrative_run_id, phase_segment_id, block_type, title, body, action_line, caution_line, timing_ref, why_factors, created_at
+      ) VALUES (
+        ${narrativeBlockId}, ${narrativeRunId}, ${block.phaseSegmentId}, 'phase_segment', ${block.title}, ${block.body},
+        ${block.actionLine}, ${block.cautionLine}, ${block.timingRef}, ${JSON.stringify(block.whyFactors)}::jsonb, NOW()
+      )
+    `;
+  }
+
+  return narrativeRunId;
+};
+
 export const getRun = async (runId: string) =>
   vedaDB.queryRow<{ run_id: string; profile_id: string }>`
     SELECT run_id, profile_id FROM veda_engine_runs WHERE run_id = ${runId}
@@ -420,7 +547,9 @@ export const recomputeScores = async (profileId: string): Promise<ScoreRow> => {
   const pcs = round2(Math.min(100, (triggerHits / Math.max(1, validatedCount)) * 100));
 
   const profile = await getProfile(profileId);
-  const rectificationBlocked = profile?.birthTimeCertainty === "uncertain" && !profile.rectificationCompleted;
+  const inputMode =
+    profile?.birthTimeInputMode ?? (profile?.birthTimeCertainty === "uncertain" ? "unknown" : "exact_time");
+  const rectificationBlocked = inputMode !== "exact_time" && !(profile?.rectificationCompleted ?? false);
   const futureUnlocked = validatedCount >= 10 && yearCoverage >= 4 && diversityScore >= 50 && psa >= 75 && !rectificationBlocked;
 
   await vedaDB.exec`

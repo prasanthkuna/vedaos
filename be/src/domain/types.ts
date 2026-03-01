@@ -1,6 +1,7 @@
 export type Id = string;
 
 export type BirthTimeCertainty = "verified" | "confident" | "uncertain";
+export type BirthTimeInputMode = "exact_time" | "six_window_approx" | "nakshatra_only" | "unknown";
 export type LanguageCode = "en" | "hi" | "te" | "ta" | "kn" | "ml";
 export type LanguageMode = "auto" | "manual";
 export type CalendarMode = "civil" | "vedic_sunrise";
@@ -25,6 +26,10 @@ export type Profile = {
   tzIana: string;
   lat?: number;
   lon?: number;
+  birthTimeInputMode: BirthTimeInputMode;
+  birthTimeWindowCode?: string;
+  birthNakshatraHint?: string;
+  birthTimeNotes?: string;
   birthTimeCertainty: BirthTimeCertainty;
   languageCode: LanguageCode;
   languageMode: LanguageMode;

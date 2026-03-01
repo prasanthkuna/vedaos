@@ -8,6 +8,7 @@ import {
   claimText,
   cosmicSnapshotFromProfile,
   makeClaimId,
+  monthlyOverview,
   phaseNextStep,
   phaseSegmentsForMode,
   rectificationWindow,
@@ -539,6 +540,31 @@ export const generateWeekly = api(
           disclaimerKey: "upaya_non_guaranteed",
         },
       },
+    };
+  },
+);
+
+export const generateMonthly = api(
+  { expose: true, method: "POST", path: "/engine/generate-monthly" },
+  async (params: { authorization?: Header<"Authorization">; profileId: string; monthStartUtc: string }) => {
+    const userId = await requireUserId(params.authorization);
+    enforceRateLimit(`monthly:${userId}`, 20, 60_000);
+    const profile = await getProfileByUser(params.profileId, userId);
+    if (!profile) throw APIError.notFound("profile_not_found");
+
+    const month = monthlyOverview(params.monthStartUtc, {
+      dob: profile.dob,
+      tobLocal: profile.rectifiedTobLocal ?? profile.tobLocal,
+      tzIana: profile.tzIana,
+      lat: profile.currentLat ?? profile.lat,
+      lon: profile.currentLon ?? profile.lon,
+      pobText: profile.currentCity ?? profile.pobText,
+    });
+
+    return {
+      provider: "deterministic_core",
+      monthStartUtc: params.monthStartUtc,
+      monthly: month,
     };
   },
 );

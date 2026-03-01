@@ -7,5 +7,5 @@ const requireEnv = (key: string, value: string | undefined): string => {
 
 export const env = {
   apiBaseUrl: requireEnv("EXPO_PUBLIC_API_BASE_URL", process.env.EXPO_PUBLIC_API_BASE_URL),
-  clerkPublishableKey: process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() ?? "",
+  clerkPublishableKey: requireEnv("EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY", process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY),
 };

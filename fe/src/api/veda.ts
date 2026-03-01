@@ -1,8 +1,21 @@
 import { apiRequest } from "../lib/api";
-import type { AtmakarakaPrimer, ForecastDTO, ProfileSummary, ScoreDTO, StoryResponse, WeeklyDTO } from "./types";
+import type { AtmakarakaPrimer, ForecastDTO, HomeV2DTO, JourneyV2DTO, MonthlyDTO, ProfileSummary, ScoreDTO, StoryResponse, WeeklyDTO } from "./types";
 
 export const vedaApi = {
-  createProfile: async (token: string, body: Record<string, unknown>) => {
+  createProfile: async (
+    token: string,
+    body: {
+      dob: string;
+      tobLocal?: string;
+      pobText: string;
+      tzIana: string;
+      birthTimeCertainty: "verified" | "confident" | "uncertain";
+      birthTimeInputMode: "exact_time" | "six_window_approx" | "nakshatra_only" | "unknown";
+      birthTimeWindowCode?: string;
+      birthNakshatraHint?: string;
+      isGuestProfile?: boolean;
+    },
+  ) => {
     const response = await apiRequest<{ profileId: string }>({
       path: "/profiles/create",
       method: "POST",
@@ -24,11 +37,30 @@ export const vedaApi = {
     }),
 
   assessRisk: (token: string, profileId: string) =>
-    apiRequest<{ riskLevel: string }>({
+    apiRequest<{ riskLevel: string; rectificationRequired: boolean; nextStep: "proceed" | "rectification_required" | "rectification_optional" }>({
       path: "/engine/assess-risk",
       method: "POST",
       token,
       body: { profileId },
+    }),
+
+  getHomeV2: (token: string, profileId: string, dayStartUtc?: string) =>
+    apiRequest<HomeV2DTO>({
+      path: "/engine/home-v2",
+      method: "GET",
+      token,
+      query: { profileId, dayStartUtc },
+    }),
+
+  generateJourneyV2: (
+    token: string,
+    input: { profileId: string; mode: "quick5y" | "full15y"; explanationMode?: "simple" | "traditional" },
+  ) =>
+    apiRequest<JourneyV2DTO>({
+      path: "/engine/generate-journey-v2",
+      method: "POST",
+      token,
+      body: input,
     }),
 
   getAtmakaraka: (token: string, profileId: string) =>
@@ -85,11 +117,19 @@ export const vedaApi = {
     }),
 
   generateForecast: (token: string, profileId: string) =>
-    apiRequest<{ forecast: ForecastDTO }>({
+    apiRequest<{ provider?: string; promptVersion?: string; forecast: ForecastDTO }>({
       path: "/engine/generate-forecast-12m",
       method: "POST",
       token,
       body: { profileId },
+    }),
+
+  generateMonthly: (token: string, input: { profileId: string; monthStartUtc: string }) =>
+    apiRequest<{ provider: string; monthStartUtc: string; monthly: MonthlyDTO }>({
+      path: "/engine/generate-monthly",
+      method: "POST",
+      token,
+      body: input,
     }),
 
   recordConsent: (token: string, input: { purposeCode: string; policyVersion: string }) =>

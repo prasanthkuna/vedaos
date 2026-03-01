@@ -1,0 +1,21 @@
+appId: host.exp.exponent
+---
+- launchApp
+- openLink: ${APP_URL}/--/risk
+- runFlow:
+    when:
+      visible: "VEDA OS"
+    commands:
+      - tapOn: "VEDA OS"
+- assertVisible: "Birth-Time Reliability"
+- tapOn:
+    id: "risk-continue"
+- extendedWaitUntil:
+    visible: "Atmakaraka Intro"
+    timeout: 20000
+- tapOn:
+    id: "atmakaraka-quickproof"
+- extendedWaitUntil:
+    visible: "Quick Proof (Last 5 Years)"
+    timeout: 30000
+- assertVisible: "Expansion"

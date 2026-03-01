@@ -1,0 +1,17 @@
+appId: host.exp.exponent
+---
+- launchApp
+- openLink: ${APP_URL}/--/quick-proof
+- runFlow:
+    when:
+      visible: "VEDA OS"
+    commands:
+      - tapOn: "VEDA OS"
+- assertVisible: "Quick Proof (Last 5 Years)"
+- tapOn: "True"
+- tapOn:
+    id: "quickproof-scoreboard"
+- extendedWaitUntil:
+    visible: "Scoreboard"
+    timeout: 20000
+- assertVisible: "Current Scores"

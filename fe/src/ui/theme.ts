@@ -1,0 +1,40 @@
+export const theme = {
+  colors: {
+    bg: "#09090B",
+    bgAlt: "#131316",
+    panel: "#14161C",
+    panelSoft: "#1D2230",
+    border: "#2F364A",
+    text: "#F6F0E4",
+    textMuted: "#B7B4AA",
+    textSoft: "#8E8A7C",
+    accent: "#E0B06B",
+    accentAlt: "#89AEE6",
+    success: "#9BD5A3",
+    danger: "#EE8B7E",
+  },
+  radius: {
+    sm: 10,
+    md: 16,
+    lg: 22,
+    round: 999,
+  },
+  spacing: {
+    xs: 6,
+    sm: 10,
+    md: 14,
+    lg: 20,
+    xl: 28,
+  },
+  font: {
+    display: "Palatino Linotype",
+    body: "Segoe UI",
+  },
+  type: {
+    hero: 34,
+    title: 21,
+    body: 15,
+    meta: 12,
+    micro: 11,
+  },
+} as const;

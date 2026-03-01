@@ -1,0 +1,36 @@
+appId: host.exp.exponent
+---
+- launchApp
+- openLink: ${APP_URL}/--/welcome
+- runFlow:
+    when:
+      visible: "VEDA OS"
+    commands:
+      - tapOn: "VEDA OS"
+- assertVisible: "Validate past, then unlock future"
+- assertNotVisible: "Continue with Google"
+- tapOn:
+    id: "welcome-start"
+- assertVisible: "Age Gate + Consent"
+- tapOn:
+    id: "consent-age18"
+- tapOn:
+    id: "consent-continue"
+- assertVisible: "Birth Details"
+- tapOn:
+    id: "birth-display-name"
+- inputText: "Prashanth"
+- tapOn:
+    id: "birth-dob"
+- inputText: "1994-02-24"
+- tapOn:
+    id: "birth-tob"
+- inputText: "10:10"
+- tapOn:
+    id: "birth-pob"
+- inputText: "Hyderabad"
+- tapOn:
+    id: "birth-generate"
+- extendedWaitUntil:
+    visible: "Birth-Time Reliability"
+    timeout: 30000

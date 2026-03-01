@@ -232,6 +232,7 @@ const run = async () => {
   });
 
   const weekStartUtc = new Date().toISOString().slice(0, 10) + "T00:00:00.000Z";
+  const monthStartUtc = new Date().toISOString().slice(0, 7) + "-01T00:00:00.000Z";
   if (env.expectPro) {
     const weekly = await request<{ weekly: { theme: string } }>({
       path: "/engine/generate-weekly",
@@ -265,6 +266,14 @@ const run = async () => {
     });
     assert(forecastError.message === "pro_required", "forecast_should_require_pro");
   }
+
+  const monthly = await request<{ monthly: { monthTheme: string } }>({
+    path: "/engine/generate-monthly",
+    method: "POST",
+    token,
+    body: { profileId, monthStartUtc },
+  });
+  assert(Boolean(monthly.monthly.monthTheme), "monthly_theme_missing");
 
   const full = await request<{ runId: string; feed: { years: Array<{ year: number }> } }>({
     path: "/engine/generate-story",

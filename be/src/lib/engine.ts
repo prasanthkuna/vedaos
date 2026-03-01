@@ -528,6 +528,93 @@ export const weeklyWindows = (weekStartUtc: string, profile?: ProfileAstroInput)
   return { friction, support, muhurthaLite };
 };
 
+export const monthlyOverview = (
+  monthStartUtc: string,
+  profile: ProfileAstroInput,
+): {
+  monthTheme: string;
+  supportWindows: Array<{ startUtc: string; endUtc: string; reason: string }>;
+  frictionWindows: Array<{ startUtc: string; endUtc: string; reason: string }>;
+  bestDates: string[];
+  cautionDates: string[];
+  monthlyUpaya: { title: string; instruction: string };
+  phaseShifts: Array<{ startsAtUtc: string; phase: string }>;
+} => {
+  const start = new Date(monthStartUtc);
+  const end = addDays(start, 30);
+  const natal = safeNatal(profile);
+  const natalMoonSign = natal.moonSignIndex;
+  const natalSatSign = signIndex(natal.sidereal.Saturn);
+  const natalJupSign = signIndex(natal.sidereal.Jupiter);
+
+  const supportWindows: Array<{ startUtc: string; endUtc: string; reason: string }> = [];
+  const frictionWindows: Array<{ startUtc: string; endUtc: string; reason: string }> = [];
+  const bestDates: string[] = [];
+  const cautionDates: string[] = [];
+
+  for (let i = 0; i < 30; i += 1) {
+    const day = addDays(start, i);
+    const moonSign = signIndex(siderealLongitude(Body.Moon, day));
+    const marsSign = signIndex(siderealLongitude(Body.Mars, day));
+    const jupSign = signIndex(siderealLongitude(Body.Jupiter, day));
+
+    const s = new Date(day);
+    s.setUTCHours(8, 0, 0, 0);
+    const e = new Date(day);
+    e.setUTCHours(11, 0, 0, 0);
+
+    if (moonSign === natalJupSign || jupiterAspects(jupSign, natalMoonSign)) {
+      supportWindows.push({
+        startUtc: s.toISOString(),
+        endUtc: e.toISOString(),
+        reason: "Jupiter support for growth and constructive action.",
+      });
+      bestDates.push(s.toISOString().slice(0, 10));
+    }
+
+    if (moonSign === natalSatSign || marsAspects(marsSign, natalMoonSign)) {
+      frictionWindows.push({
+        startUtc: s.toISOString(),
+        endUtc: e.toISOString(),
+        reason: "Moon/Mars pressure. Slow down before major commitments.",
+      });
+      cautionDates.push(s.toISOString().slice(0, 10));
+    }
+  }
+
+  const phaseSet = phaseSegmentsForMode("quick5y", profile).segments
+    .filter((segment) => {
+      const segmentStart = new Date(segment.startUtc).getTime();
+      return segmentStart >= start.getTime() && segmentStart <= end.getTime();
+    })
+    .slice(0, 3)
+    .map((segment) => ({
+      startsAtUtc: segment.startUtc,
+      phase: `${segment.mdLord}-${segment.adLord}-${segment.pdLord ?? ""}`.replace(/-$/, ""),
+    }));
+
+  const theme =
+    supportWindows.length > frictionWindows.length
+      ? "Expansion month with disciplined execution windows."
+      : frictionWindows.length > supportWindows.length
+        ? "Consolidation month; protect energy and avoid reactive moves."
+        : "Balanced month; steady effort brings measurable progress.";
+
+  return {
+    monthTheme: theme,
+    supportWindows: supportWindows.slice(0, 8),
+    frictionWindows: frictionWindows.slice(0, 8),
+    bestDates: Array.from(new Set(bestDates)).slice(0, 8),
+    cautionDates: Array.from(new Set(cautionDates)).slice(0, 8),
+    monthlyUpaya: {
+      title: "Monthly grounding upaya",
+      instruction:
+        "On Thursdays, begin one important task during support windows and avoid emotionally charged decisions on caution dates.",
+    },
+    phaseShifts: phaseSet,
+  };
+};
+
 export const phaseSegmentsForMode = (
   mode: JourneyMode,
   profile: ProfileAstroInput,

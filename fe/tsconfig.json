@@ -6,11 +6,15 @@
     "strict": true,
     "jsx": "react-jsx",
     "skipLibCheck": true,
-    "types": ["expo-router"]
+    "types": [
+      "expo-router"
+    ]
   },
   "include": [
     "app",
     "src",
-    "expo-env.d.ts"
-  ]
+    "expo-env.d.ts",
+    ".expo/types/**/*.ts"
+  ],
+  "extends": "expo/tsconfig.base"
 }

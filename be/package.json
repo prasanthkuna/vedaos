@@ -10,7 +10,10 @@
     "start": "encore run",
     "typecheck": "bunx tsc --noEmit -p tsconfig.bun.json",
     "lint": "bun run typecheck",
-    "smoke:api": "bun run scripts/smoke-api.ts"
+    "smoke:api": "bun run scripts/smoke-api.ts",
+    "db:reset": "bun run scripts/reset-db.ts",
+    "db:reset:local": "bun run scripts/reset-db.ts --yes",
+    "db:reset:staging": "bun run scripts/reset-db.ts --yes --namespace staging"
   },
   "dependencies": {
     "@clerk/backend": "^2.33.0",
